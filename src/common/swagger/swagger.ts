@@ -1,7 +1,7 @@
 import { INestApplication } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
-const ACCESS_TOKEN = "access-token";
+import { ACCESS_TOKEN } from "src/modules/auth/constants/auth.constants";
 
 export const setupSwagger = (app: INestApplication) => {
     const config = new DocumentBuilder()

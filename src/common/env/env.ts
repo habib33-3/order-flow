@@ -1,6 +1,7 @@
 /* eslint-disable no-console */
 /* eslint-disable n/prefer-global/process */
 import "dotenv/config";
+import ms from "ms";
 import { z } from "zod";
 
 const envSchema = z.object({
@@ -10,6 +11,17 @@ const envSchema = z.object({
     PORT: z.coerce.number().default(5000),
     DATABASE_URL: z.url(),
     REDIS_URL: z.url(),
+    JWT_SECRET: z.string(),
+    JWT_EXPIRES: z
+        .string()
+        .transform((val) => {
+            const parsed = ms(val as ms.StringValue);
+            if (typeof parsed !== "number") {
+                throw new Error(`Invalid JWT_EXPIRES: ${val}`);
+            }
+            return parsed;
+        })
+        .default(ms("1h")),
 });
 
 export type Env = z.infer<typeof envSchema>;
