@@ -8,6 +8,7 @@ const envSchema = z.object({
         .enum(["development", "production", "test"])
         .default("development"),
     PORT: z.coerce.number().default(5000),
+    DATABASE_URL: z.url(),
 });
 
 export type Env = z.infer<typeof envSchema>;
