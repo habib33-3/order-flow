@@ -3,11 +3,14 @@ import { NestFactory } from "@nestjs/core";
 
 import { AppModule } from "./app.module";
 import { env } from "./common/env/env";
+import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 
 async function bootstrap() {
     const app = await NestFactory.create(AppModule);
 
     const logger = new Logger("Bootstrap");
+
+    app.useGlobalFilters(new GlobalExceptionFilter());
 
     await app.listen(env.PORT);
 
