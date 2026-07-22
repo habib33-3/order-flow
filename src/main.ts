@@ -38,8 +38,8 @@ async function bootstrap() {
 
     const logger = new Logger("Bootstrap");
 
-    logger.log(`Application is running on: localhost:${env.PORT}`);
-    logger.log(`API docs: localhost:${env.PORT}/api/docs`);
+    logger.log(`Application is running on: http://localhost:${env.PORT}`);
+    logger.log(`API docs: http://localhost:${env.PORT}/api/docs`);
 }
 
 bootstrap().catch((err) => {
