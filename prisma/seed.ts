@@ -17,10 +17,13 @@ const prisma = new PrismaClient({
     }),
 });
 
+const generateStock = (min = 10, max = 100) => {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+};
+
 const cleanDatabase = async () => {
     console.log("🧹 Cleaning database...");
 
-    // Delete dependent records first if your schema has relations.
     const deletedProducts = await prisma.product.deleteMany();
     console.log(`✅ Deleted ${deletedProducts.count} product(s).`);
 
@@ -73,18 +76,21 @@ const seedProducts = async () => {
             description: "Description 1",
             price: 10,
             sku: generateSku(),
+            stock: generateStock(),
         },
         {
             name: "Product 2",
             description: "Description 2",
             price: 20,
             sku: generateSku(),
+            stock: generateStock(),
         },
         {
             name: "Product 3",
             description: "Description 3",
             price: 30,
             sku: generateSku(),
+            stock: generateStock(),
         },
     ];
 
