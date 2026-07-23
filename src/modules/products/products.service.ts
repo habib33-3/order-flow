@@ -1,10 +1,14 @@
 import { randomBytes } from "node:crypto";
 
-import { ConflictException, Injectable } from "@nestjs/common";
+import {
+    ConflictException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
 
 import { Decimal } from "@prisma/client/runtime/client";
 import { PrismaService } from "src/common/prisma/prisma.service";
-import { Prisma } from "src/generated/prisma/client";
+import { Prisma, ProductStatus } from "src/generated/prisma/client";
 
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
@@ -64,7 +68,7 @@ export class ProductsService {
         });
 
         if (!product) {
-            throw new ConflictException("Product not found");
+            throw new NotFoundException("Product not found");
         }
 
         const updateData: Prisma.ProductUpdateInput = {
@@ -97,7 +101,7 @@ export class ProductsService {
         });
 
         if (!product) {
-            throw new ConflictException("Product not found");
+            throw new NotFoundException("Product not found");
         }
 
         await this.prisma.product.delete({
@@ -107,5 +111,93 @@ export class ProductsService {
         return {
             message: "Product deleted successfully",
         };
+    }
+
+    async getAllProducts(
+        search?: string,
+        cursorId?: string,
+        limit = 20,
+        filter?: {
+            status?: ProductStatus;
+        },
+        sort: "asc" | "desc" = "desc",
+        sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt"
+    ) {
+        limit = Math.min(Math.max(limit, 1), 50);
+
+        const where: Prisma.ProductWhereInput = {};
+
+        if (search?.trim()) {
+            const searchTerm = search.trim();
+
+            where.OR = [
+                {
+                    name: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    },
+                },
+                {
+                    description: {
+                        contains: searchTerm,
+                        mode: "insensitive",
+                    },
+                },
+            ];
+        }
+
+        if (filter?.status) {
+            where.status = filter.status;
+        }
+
+        const products = await this.prisma.product.findMany({
+            where,
+            take: limit + 1,
+
+            ...(cursorId && {
+                cursor: {
+                    id: cursorId,
+                },
+                skip: 1,
+            }),
+
+            orderBy: [
+                {
+                    [sortBy]: sort,
+                },
+                {
+                    id: sort,
+                },
+            ],
+        });
+
+        const hasNextPage = products.length > limit;
+
+        if (hasNextPage) {
+            products.pop();
+        }
+
+        return {
+            data: products,
+            meta: {
+                limit,
+                hasNextPage,
+                nextCursor: hasNextPage
+                    ? products[products.length - 1].id
+                    : null,
+            },
+        };
+    }
+
+    async getProductById(productId: string) {
+        const product = await this.prisma.product.findUnique({
+            where: { id: productId },
+        });
+
+        if (!product) {
+            throw new NotFoundException("Product not found");
+        }
+
+        return product;
     }
 }
