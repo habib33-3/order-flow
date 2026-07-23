@@ -9,6 +9,7 @@ import { PrismaModule } from "./common/prisma/prisma.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { JwtGuard } from "./modules/auth/guards/jwt.guard";
+import { ProductsModule } from "./modules/products/products.module";
 
 @Module({
     imports: [
@@ -16,6 +17,7 @@ import { JwtGuard } from "./modules/auth/guards/jwt.guard";
         PrismaModule,
         RedisModule,
         AuthModule,
+        ProductsModule,
     ],
     controllers: [AppController],
     providers: [
