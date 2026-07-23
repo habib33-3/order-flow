@@ -1,5 +1,3 @@
-import { randomBytes } from "node:crypto";
-
 import {
     ConflictException,
     Injectable,
@@ -8,6 +6,7 @@ import {
 
 import { Decimal } from "@prisma/client/runtime/client";
 import { PrismaService } from "src/common/prisma/prisma.service";
+import { generateSku } from "src/common/utils/generate-sku";
 import { Prisma, ProductStatus } from "src/generated/prisma/client";
 
 import { CreateProductDto } from "./dto/create-product.dto";
@@ -16,13 +15,6 @@ import { UpdateProductDto } from "./dto/update-product.dto";
 @Injectable()
 export class ProductsService {
     constructor(private readonly prisma: PrismaService) {}
-
-    private generateSku() {
-        const timestamp = Date.now().toString(36).toUpperCase();
-        const random = randomBytes(2).toString("hex").toUpperCase();
-
-        return `SKU-${timestamp}-${random}`;
-    }
 
     async createProduct(payload: CreateProductDto) {
         const MAX_RETRIES = 3;
@@ -39,7 +31,7 @@ export class ProductsService {
                         description: payload.description,
                         price: decimalPrice,
                         stock: payload.stock,
-                        sku: this.generateSku(),
+                        sku: generateSku(),
                         status: payload.status,
                     },
                 });
