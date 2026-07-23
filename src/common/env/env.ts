@@ -14,14 +14,19 @@ const envSchema = z.object({
     JWT_SECRET: z.string(),
     JWT_EXPIRES: z
         .string()
-        .transform((val) => {
-            const parsed = ms(val as ms.StringValue);
-            if (typeof parsed !== "number") {
-                throw new Error(`Invalid JWT_EXPIRES: ${val}`);
+        .default("12h")
+        .refine(
+            (value) => {
+                const parsed = ms(value as ms.StringValue);
+
+                return typeof parsed === "number" && parsed > 0;
+            },
+            {
+                message:
+                    "JWT_EXPIRES must be a positive duration, e.g. 15m, 12h, or 7d",
             }
-            return parsed;
-        })
-        .default(ms("1h")),
+        )
+        .transform((value) => value as ms.StringValue),
 });
 
 export type Env = z.infer<typeof envSchema>;

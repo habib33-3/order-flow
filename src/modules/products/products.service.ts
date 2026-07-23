@@ -7,6 +7,7 @@ import { PrismaService } from "src/common/prisma/prisma.service";
 import { Prisma } from "src/generated/prisma/client";
 
 import { CreateProductDto } from "./dto/create-product.dto";
+import { UpdateProductDto } from "./dto/update-product.dto";
 
 @Injectable()
 export class ProductsService {
@@ -55,5 +56,56 @@ export class ProductsService {
                 throw error;
             }
         }
+    }
+
+    async updateProduct(payload: UpdateProductDto, productId: string) {
+        const product = await this.prisma.product.findUnique({
+            where: { id: productId },
+        });
+
+        if (!product) {
+            throw new ConflictException("Product not found");
+        }
+
+        const updateData: Prisma.ProductUpdateInput = {
+            ...(payload.name !== undefined && {
+                name: payload.name,
+            }),
+            ...(payload.description !== undefined && {
+                description: payload.description,
+            }),
+            ...(payload.price !== undefined && {
+                price: payload.price,
+            }),
+            ...(payload.stock !== undefined && {
+                stock: payload.stock,
+            }),
+            ...(payload.status !== undefined && {
+                status: payload.status,
+            }),
+        };
+
+        return this.prisma.product.update({
+            where: { id: productId },
+            data: updateData,
+        });
+    }
+
+    async deleteProduct(productId: string) {
+        const product = await this.prisma.product.findUnique({
+            where: { id: productId },
+        });
+
+        if (!product) {
+            throw new ConflictException("Product not found");
+        }
+
+        await this.prisma.product.delete({
+            where: { id: productId },
+        });
+
+        return {
+            message: "Product deleted successfully",
+        };
     }
 }
