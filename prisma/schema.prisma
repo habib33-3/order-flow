@@ -4,9 +4,10 @@
 // Get a free hosted Postgres database in seconds: `npx create-db`
 
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  provider            = "prisma-client"
+  output              = "../src/generated/prisma"
+  moduleFormat        = "cjs"
+  importFileExtension = "js"
 }
 
 datasource db {
@@ -30,12 +31,12 @@ enum UserRole {
 }
 
 model Product {
-  id          String   @id @default(cuid())
+  id          String        @id @default(cuid())
   name        String
-  sku         String   @unique
+  sku         String        @unique
   description String
-  price       Decimal  @db.Decimal(10, 2)
-  stock       Int      @default(0)
+  price       Decimal       @db.Decimal(10, 2)
+  stock       Int           @default(0)
   status      ProductStatus @default(ACTIVE)
 
   createdAt DateTime @default(now())

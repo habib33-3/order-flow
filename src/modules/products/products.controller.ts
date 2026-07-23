@@ -1,6 +1,8 @@
 import { Body, Controller, Post } from "@nestjs/common";
 import { ApiOperation } from "@nestjs/swagger";
 
+import { AdminGuard } from "src/common/guards/admin.guard";
+
 import { CreateProductDto } from "./dto/create-product.dto";
 import { ProductsService } from "./products.service";
 
@@ -8,6 +10,7 @@ import { ProductsService } from "./products.service";
 export class ProductsController {
     constructor(private readonly productsService: ProductsService) {}
 
+    @AdminGuard()
     @Post()
     @ApiOperation({
         summary: "Create a new product",

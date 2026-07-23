@@ -12,7 +12,7 @@ export class LoginUserDto {
     email: string;
 
     @ApiProperty({
-        example: "StrongPassword123!",
+        example: "123456",
         description: "The user's password",
     })
     @IsString()
