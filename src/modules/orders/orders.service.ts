@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
-import { Prisma } from "src/generated/prisma/client";
+import { OrderStatus, Prisma } from "src/generated/prisma/client";
 
 import { CreateOrderDto } from "./dto/create-order.dto";
 
@@ -45,6 +45,12 @@ export class OrdersService {
                 if (!product) {
                     throw new BadRequestException(
                         `Product ${item.productId} not found`
+                    );
+                }
+
+                if (product.status !== "ACTIVE") {
+                    throw new BadRequestException(
+                        `Product ${product.id} is not available`
                     );
                 }
 
@@ -106,5 +112,124 @@ export class OrdersService {
 
             return order;
         });
+    }
+
+    private async getOrders(
+        where: Prisma.OrderWhereInput,
+        search?: string,
+        cursorId?: string,
+        limit = 10,
+        filter?: {
+            status?: OrderStatus;
+        },
+        sort: "asc" | "desc" = "desc",
+        sortBy: "createdAt" | "total" = "createdAt"
+    ) {
+        limit = Math.min(Math.max(limit, 1), 50);
+
+        if (search?.trim()) {
+            const searchTerm = search.trim();
+
+            where.OR = [
+                {
+                    user: {
+                        name: {
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        },
+                    },
+                },
+                {
+                    user: {
+                        email: {
+                            contains: searchTerm,
+                            mode: "insensitive",
+                        },
+                    },
+                },
+            ];
+        }
+
+        if (filter?.status) {
+            where.status = filter.status;
+        }
+
+        return this.prisma.order.findMany({
+            where,
+            take: limit + 1,
+            cursor: cursorId
+                ? {
+                      id: cursorId,
+                  }
+                : undefined,
+            skip: cursorId ? 1 : 0,
+            orderBy: [
+                {
+                    [sortBy]: sort,
+                },
+                {
+                    id: sort,
+                },
+            ],
+            include: {
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        email: true,
+                    },
+                },
+                items: true,
+            },
+        });
+    }
+
+    async getAllOrders(
+        search?: string,
+        cursorId?: string,
+        limit = 10,
+        filter?: {
+            status?: OrderStatus;
+        },
+        sort: "asc" | "desc" = "desc",
+        sortBy: "createdAt" | "total" = "createdAt"
+    ) {
+        const where: Prisma.OrderWhereInput = {};
+
+        return this.getOrders(
+            where,
+            search,
+            cursorId,
+            limit,
+            filter,
+            sort,
+            sortBy
+        );
+    }
+
+    async getMyOrders(
+        userId: string,
+        search?: string,
+        cursorId?: string,
+        limit = 10,
+        filter?: {
+            status?: OrderStatus;
+        },
+        sort: "asc" | "desc" = "desc",
+        sortBy: "createdAt" | "total" = "createdAt"
+    ) {
+        const where: Prisma.OrderWhereInput = {
+            userId,
+        };
+
+        return this.getOrders(
+            where,
+            search,
+            cursorId,
+            limit,
+            filter,
+            sort,
+            sortBy
+        );
     }
 }
