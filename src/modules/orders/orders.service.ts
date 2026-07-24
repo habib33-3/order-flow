@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
 import { OrderStatus, Prisma } from "src/generated/prisma/client";
@@ -231,5 +235,77 @@ export class OrdersService {
             sort,
             sortBy
         );
+    }
+
+    async cancelOrder(userId: string, orderId: string) {
+        const order = await this.prisma.order.findFirst({
+            where: {
+                id: orderId,
+                userId,
+            },
+            select: {
+                id: true,
+                status: true,
+                items: {
+                    select: {
+                        productId: true,
+                        quantity: true,
+                    },
+                },
+            },
+        });
+
+        if (!order) {
+            throw new NotFoundException("Order not found");
+        }
+
+        if (order.status !== "PENDING") {
+            throw new BadRequestException("Order is not pending");
+        }
+
+        const canceledOrder = await this.prisma.$transaction(async (tx) => {
+            const updatedOrder = await tx.order.updateMany({
+                where: {
+                    id: order.id,
+                    userId,
+                    status: "PENDING",
+                },
+                data: {
+                    status: "CANCELED",
+                },
+            });
+
+            if (updatedOrder.count === 0) {
+                throw new BadRequestException(
+                    "Order is no longer pending or has already been canceled"
+                );
+            }
+
+            await Promise.all(
+                order.items.map(async (item) =>
+                    tx.product.update({
+                        where: {
+                            id: item.productId,
+                        },
+                        data: {
+                            stock: {
+                                increment: item.quantity,
+                            },
+                        },
+                    })
+                )
+            );
+
+            return tx.order.findUnique({
+                where: {
+                    id: order.id,
+                },
+                include: {
+                    items: true,
+                },
+            });
+        });
+
+        return canceledOrder;
     }
 }

@@ -93,11 +93,11 @@ export class ProductsController {
         type: Number,
         required: false,
         description:
-            "Number of products to return per page. Maximum allowed value is 100.",
-        example: 20,
-        default: 20,
+            "Number of products to return per page. Maximum allowed value is 20.",
+        example: 10,
+        default: 10,
         minimum: 1,
-        maximum: 100,
+        maximum: 20,
     })
     @ApiQuery({
         name: "status",

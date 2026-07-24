@@ -2,12 +2,14 @@ import {
     Body,
     Controller,
     Get,
+    Param,
     ParseEnumPipe,
     ParseIntPipe,
+    Patch,
     Post,
     Query,
 } from "@nestjs/common";
-import { ApiOperation, ApiQuery } from "@nestjs/swagger";
+import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AdminGuard } from "src/common/guards/admin.guard";
@@ -213,5 +215,22 @@ export class OrdersController {
             sort,
             sortBy
         );
+    }
+
+    @Patch(":id/cancel")
+    @ApiOperation({
+        summary: "Cancel an order",
+        description: "Cancel an order by its ID.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "The ID of the order to cancel.",
+    })
+    async cancelOrder(
+        @Param("id") id: string,
+        @CurrentUser("sub") userId: string
+    ) {
+        return this.ordersService.cancelOrder(userId, id);
     }
 }

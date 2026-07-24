@@ -24,6 +24,13 @@ const generateStock = (min = 10, max = 100) => {
 const cleanDatabase = async () => {
     console.log("🧹 Cleaning database...");
 
+    // OrderItem -> Order -> User/Product dependency chain
+    const deletedOrderItems = await prisma.orderItem.deleteMany();
+    console.log(`✅ Deleted ${deletedOrderItems.count} order item(s).`);
+
+    const deletedOrders = await prisma.order.deleteMany();
+    console.log(`✅ Deleted ${deletedOrders.count} order(s).`);
+
     const deletedProducts = await prisma.product.deleteMany();
     console.log(`✅ Deleted ${deletedProducts.count} product(s).`);
 
@@ -99,6 +106,144 @@ const seedProducts = async () => {
     });
 
     console.log(`✅ Created ${result.count} product(s).`);
+
+    return prisma.product.findMany({
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
+};
+
+const seedOrders = async (
+    userId: string,
+    products: Awaited<ReturnType<typeof seedProducts>>
+) => {
+    console.log("📦 Creating orders...");
+
+    if (products.length < 3) {
+        throw new Error("At least 3 products are required to seed orders.");
+    }
+
+    const product1 = products[0];
+    const product2 = products[1];
+    const product3 = products[2];
+
+    const order1Quantity1 = 2;
+    const order1Quantity2 = 1;
+
+    const order1Subtotal1 = Number(product1.price) * order1Quantity1;
+
+    const order1Subtotal2 = Number(product2.price) * order1Quantity2;
+
+    const order1Total = order1Subtotal1 + order1Subtotal2;
+
+    const order2Quantity = 3;
+
+    const order2Subtotal = Number(product3.price) * order2Quantity;
+
+    const order2Total = order2Subtotal;
+
+    const result = await prisma.$transaction(async (tx) => {
+        // Reduce stock for the products used in orders.
+        await tx.product.update({
+            where: {
+                id: product1.id,
+            },
+            data: {
+                stock: {
+                    decrement: order1Quantity1,
+                },
+            },
+        });
+
+        await tx.product.update({
+            where: {
+                id: product2.id,
+            },
+            data: {
+                stock: {
+                    decrement: order1Quantity2,
+                },
+            },
+        });
+
+        await tx.product.update({
+            where: {
+                id: product3.id,
+            },
+            data: {
+                stock: {
+                    decrement: order2Quantity,
+                },
+            },
+        });
+
+        const order1 = await tx.order.create({
+            data: {
+                userId,
+                total: order1Total,
+                status: "PAID",
+                paidAt: new Date(),
+                items: {
+                    create: [
+                        {
+                            productId: product1.id,
+                            quantity: order1Quantity1,
+                            unitPrice: product1.price,
+                            subtotal: order1Subtotal1,
+                        },
+                        {
+                            productId: product2.id,
+                            quantity: order1Quantity2,
+                            unitPrice: product2.price,
+                            subtotal: order1Subtotal2,
+                        },
+                    ],
+                },
+            },
+            include: {
+                items: true,
+            },
+        });
+
+        const order2 = await tx.order.create({
+            data: {
+                userId,
+                total: order2Total,
+                status: "PENDING",
+                items: {
+                    create: [
+                        {
+                            productId: product3.id,
+                            quantity: order2Quantity,
+                            unitPrice: product3.price,
+                            subtotal: order2Subtotal,
+                        },
+                    ],
+                },
+            },
+            include: {
+                items: true,
+            },
+        });
+
+        return {
+            order1,
+            order2,
+        };
+    });
+
+    console.log(
+        `✅ Created order ${result.order1.id} with ${result.order1.items.length} item(s).`
+    );
+
+    console.log(
+        `✅ Created order ${result.order2.id} with ${result.order2.items.length} item(s).`
+    );
+
+    console.log("✅ Orders seeded successfully.");
+
+    return result;
 };
 
 const main = async () => {
@@ -116,14 +261,22 @@ const main = async () => {
 
     console.log("\n👥 Seeding users...");
 
-    await seedAdmin(hashedPassword);
-    await seedUser(hashedPassword);
+    const admin = await seedAdmin(hashedPassword);
+    const user = await seedUser(hashedPassword);
 
     console.log("\n🛒 Seeding products...");
 
-    await seedProducts();
+    const products = await seedProducts();
+
+    console.log("\n📦 Seeding orders...");
+
+    await seedOrders(user.id, products);
 
     console.log("\n🎉 Database seed completed successfully!");
+    console.log("\n📋 Seed credentials:");
+    console.log(`Admin: ${admin.email}`);
+    console.log(`User: ${user.email}`);
+    console.log(`Password: ${plainPassword}`);
 };
 
 main()
