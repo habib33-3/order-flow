@@ -1,0 +1,63 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: raco-ai-job-task
+    env_file:
+      - .env.docker
+    ports:
+      - "5000:5000"
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    restart: unless-stopped
+    networks:
+      - raco-ai-job-task-network
+
+  db:
+    image: postgres:17-alpine
+    container_name: raco-ai-job-task-db
+    env_file:
+      - .env.docker
+    volumes:
+      - db-data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $$POSTGRES_USER -d $$POSTGRES_DB"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 10s
+    restart: unless-stopped
+    networks:
+      - raco-ai-job-task-network
+
+  redis:
+    image: redis:7-alpine
+    container_name: raco-ai-job-task-redis
+    command: redis-server --appendonly yes
+    volumes:
+      - redis-data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+      start_period: 5s
+    restart: unless-stopped
+    networks:
+      - raco-ai-job-task-network
+
+volumes:
+  db-data:
+    name: raco-ai-job-task-db-data
+
+  redis-data:
+    name: raco-ai-job-task-redis-data
+
+networks:
+  raco-ai-job-task-network:
+    name: raco-ai-job-task-network
+    driver: bridge
