@@ -7,11 +7,15 @@ import {
 import { PrismaService } from "src/common/prisma/prisma.service";
 import { OrderStatus, Prisma } from "src/generated/prisma/client";
 
+import { PaymentFactory } from "../payment/payment.factory";
 import { CreateOrderDto } from "./dto/create-order.dto";
 
 @Injectable()
 export class OrdersService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly paymentFactory: PaymentFactory
+    ) {}
 
     async createOrder(userId: string, payload: CreateOrderDto) {
         const productIds = payload.items.map((item) => item.productId);
@@ -24,7 +28,7 @@ export class OrdersService {
             );
         }
 
-        return this.prisma.$transaction(async (tx) => {
+        const order = await this.prisma.$transaction(async (tx) => {
             const products = await tx.product.findMany({
                 where: {
                     id: {
@@ -116,6 +120,14 @@ export class OrdersService {
 
             return order;
         });
+
+        const paymentStrategy = this.paymentFactory.getStrategy(
+            payload.paymentProvider
+        );
+
+        await paymentStrategy.createPayment();
+
+        return order;
     }
 
     private async getOrders(

@@ -24,6 +24,8 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   orders    Order[]
+
+
 }
 
 enum UserRole {
@@ -43,6 +45,8 @@ model Product {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   orderItems OrderItem[]
+
+
 }
 
 enum ProductStatus {
@@ -63,6 +67,8 @@ model OrderItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+
 }
 
 model Order {
@@ -77,12 +83,48 @@ model Order {
   paidAt     DateTime?
   canceledAt DateTime?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  payments  Payment[]
+
+
 }
 
 enum OrderStatus {
   PENDING
   PAID
   CANCELED
+}
+
+model Payment {
+  id String @id @default(cuid())
+
+  amount   Decimal         @db.Decimal(10, 2)
+  status   PaymentStatus   @default(PENDING)
+  provider PaymentProvider
+
+  idempotencyKey String @unique
+
+  transactionId String?
+
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id], onDelete: Restrict)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([provider, idempotencyKey])
+  @@unique([provider, transactionId])
+  @@index([orderId])
+}
+
+enum PaymentStatus {
+  PENDING
+  PAID
+  CANCELED
+}
+
+enum PaymentProvider {
+  STRIPE
+  BKASH
 }

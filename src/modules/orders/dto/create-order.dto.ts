@@ -4,12 +4,14 @@ import { Type } from "class-transformer";
 import {
     ArrayMinSize,
     IsArray,
+    IsEnum,
     IsInt,
     IsNotEmpty,
     IsPositive,
     IsString,
     ValidateNested,
 } from "class-validator";
+import { PaymentProvider } from "src/generated/prisma/enums";
 
 export class OrderItemDto {
     @ApiProperty({
@@ -48,4 +50,13 @@ export class CreateOrderDto {
     @ValidateNested({ each: true })
     @Type(() => OrderItemDto)
     items: OrderItemDto[];
+
+    @ApiProperty({
+        description: "The payment provider to use for the order.",
+        enum: PaymentProvider,
+        enumName: "PaymentProvider",
+        example: PaymentProvider.STRIPE,
+    })
+    @IsEnum(PaymentProvider)
+    paymentProvider: PaymentProvider;
 }
