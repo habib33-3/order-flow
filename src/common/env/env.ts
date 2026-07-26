@@ -27,6 +27,9 @@ const envSchema = z.object({
             }
         )
         .transform((value) => value as ms.StringValue),
+    STRIPE_SECRET_KEY: z.string(),
+    STRIPE_WEBHOOK_SECRET: z.string(),
+    CLIENT_URL: z.url().default("http://localhost:3000"),
 });
 
 export type Env = z.infer<typeof envSchema>;

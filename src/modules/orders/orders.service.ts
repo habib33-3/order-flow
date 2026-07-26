@@ -7,14 +7,14 @@ import {
 import { PrismaService } from "src/common/prisma/prisma.service";
 import { OrderStatus, Prisma } from "src/generated/prisma/client";
 
-import { PaymentFactory } from "../payment/payment.factory";
+import { PaymentService } from "../payment/payment.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 
 @Injectable()
 export class OrdersService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly paymentFactory: PaymentFactory
+        private readonly payment: PaymentService
     ) {}
 
     async createOrder(userId: string, payload: CreateOrderDto) {
@@ -91,8 +91,24 @@ export class OrdersService {
                         },
                     },
                 },
-                include: {
-                    items: true,
+                select: {
+                    id: true,
+                    total: true,
+                    user: {
+                        select: { id: true, name: true, email: true },
+                    },
+                    items: {
+                        select: {
+                            productId: true,
+                            quantity: true,
+                            unitPrice: true,
+                            product: {
+                                select: {
+                                    name: true,
+                                },
+                            },
+                        },
+                    },
                 },
             });
 
@@ -121,13 +137,27 @@ export class OrdersService {
             return order;
         });
 
-        const paymentStrategy = this.paymentFactory.getStrategy(
-            payload.paymentProvider
-        );
+        const checkout = await this.payment.createPayment({
+            items: order.items.map((item) => ({
+                productId: item.productId,
+                quantity: item.quantity,
+                unitPrice: item.unitPrice,
+                product: {
+                    name: item.product.name,
+                },
+            })),
+            amount: order.total.toNumber(),
+            orderId: order.id,
+            user: {
+                id: userId,
+                email: order.user.email,
+                name: order.user.name,
+            },
+            userId,
+            provider: payload.paymentProvider,
+        });
 
-        await paymentStrategy.createPayment();
-
-        return order;
+        return checkout;
     }
 
     private async getOrders(
