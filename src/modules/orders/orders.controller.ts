@@ -233,4 +233,18 @@ export class OrdersController {
     ) {
         return this.ordersService.cancelOrder(userId, id);
     }
+
+    @Get(":id")
+    @ApiOperation({
+        summary: "Get an order by ID",
+        description: "Retrieve an order by its ID.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "The ID of the order to retrieve.",
+    })
+    async getOrder(@Param("id") id: string) {
+        return this.ordersService.getOrderById(id);
+    }
 }

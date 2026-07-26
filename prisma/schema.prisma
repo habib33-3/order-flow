@@ -116,7 +116,8 @@ model Payment {
 enum PaymentStatus {
   PENDING
   PAID
-  CANCELED
+  FAILED
+  EXPIRED
 }
 
 enum PaymentProvider {

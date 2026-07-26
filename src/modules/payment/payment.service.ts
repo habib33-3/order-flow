@@ -1,7 +1,15 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
-import { PaymentProvider } from "src/generated/prisma/enums";
+import {
+    OrderStatus,
+    PaymentProvider,
+    PaymentStatus,
+} from "src/generated/prisma/enums";
 
 import { PaymentDto } from "./dto/payment.dto";
 import { BkashStrategy } from "./strategies/bkash.strategy";
@@ -57,5 +65,150 @@ export class PaymentService {
         });
 
         return result;
+    }
+
+    async handlePaymentSuccess(payload: {
+        paymentId: string;
+        providerPaymentId: string | null;
+    }) {
+        return this.prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.findUnique({
+                where: {
+                    id: payload.paymentId,
+                },
+            });
+
+            if (!payment) {
+                throw new NotFoundException(
+                    `Payment ${payload.paymentId} not found`
+                );
+            }
+
+            if (payment.status === PaymentStatus.PAID) {
+                return payment;
+            }
+
+            if (
+                payment.status === PaymentStatus.FAILED ||
+                payment.status === PaymentStatus.EXPIRED
+            ) {
+                return payment;
+            }
+
+            const updatedPayment = await tx.payment.update({
+                where: {
+                    id: payment.id,
+                },
+                data: {
+                    status: PaymentStatus.PAID,
+                    transactionId: payload.providerPaymentId,
+                },
+            });
+
+            await tx.order.updateMany({
+                where: {
+                    id: payment.orderId,
+                    status: OrderStatus.PENDING,
+                },
+                data: {
+                    status: OrderStatus.PAID,
+                    paidAt: new Date(),
+                },
+            });
+
+            return updatedPayment;
+        });
+    }
+
+    async handlePaymentFailed(payload: { paymentId: string }) {
+        return this.prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.findUnique({
+                where: {
+                    id: payload.paymentId,
+                },
+            });
+
+            if (!payment) {
+                throw new NotFoundException(
+                    `Payment ${payload.paymentId} not found`
+                );
+            }
+
+            if (payment.status === PaymentStatus.FAILED) {
+                return payment;
+            }
+
+            if (payment.status === PaymentStatus.PAID) {
+                return payment;
+            }
+
+            const updatedPayment = await tx.payment.update({
+                where: {
+                    id: payment.id,
+                },
+                data: {
+                    status: PaymentStatus.FAILED,
+                },
+            });
+
+            await tx.order.updateMany({
+                where: {
+                    id: payment.orderId,
+                    status: OrderStatus.PENDING,
+                },
+                data: {
+                    status: OrderStatus.CANCELED,
+                    canceledAt: new Date(),
+                },
+            });
+
+            return updatedPayment;
+        });
+    }
+
+    async handlePaymentExpired(payload: { paymentId: string }) {
+        return this.prisma.$transaction(async (tx) => {
+            const payment = await tx.payment.findUnique({
+                where: {
+                    id: payload.paymentId,
+                },
+            });
+
+            if (!payment) {
+                throw new NotFoundException(
+                    `Payment ${payload.paymentId} not found`
+                );
+            }
+
+            if (payment.status === PaymentStatus.EXPIRED) {
+                return payment;
+            }
+
+            if (payment.status === PaymentStatus.PAID) {
+                return payment;
+            }
+
+            const updatedPayment = await tx.payment.update({
+                where: {
+                    id: payment.id,
+                },
+                data: {
+                    status: PaymentStatus.EXPIRED,
+                },
+            });
+
+            await tx.order.updateMany({
+                where: {
+                    id: payment.orderId,
+                    status: OrderStatus.PENDING,
+                },
+                data: {
+                    status: OrderStatus.CANCELED,
+                    canceledAt: new Date(),
+                },
+            });
+
+            return updatedPayment;
+        });
     }
 }
