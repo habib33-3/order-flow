@@ -36,6 +36,13 @@ export class BkashCallbackService {
             return payment;
         }
 
+        const callbackStatus = payload.status?.toLowerCase();
+        if (callbackStatus && callbackStatus !== "success") {
+            return this.payment.handlePaymentFailed({
+                paymentId: payment.id,
+            });
+        }
+
         const result = await this.bkash.executePayment(payload.paymentID);
 
         if (result.transactionStatus === "Completed") {

@@ -2,6 +2,7 @@ import {
     BadRequestException,
     Injectable,
     InternalServerErrorException,
+    Logger,
 } from "@nestjs/common";
 
 import axios, { AxiosInstance } from "axios";
@@ -33,6 +34,8 @@ export class BkashStrategy {
             },
         });
     }
+
+    private logger = new Logger(BkashStrategy.name);
 
     private async getGrantToken() {
         if (this.accessToken && Date.now() < this.accessTokenExpiresAt) {
@@ -71,17 +74,13 @@ export class BkashStrategy {
         const token = await this.getGrantToken();
 
         return {
-            "Authorization": `Bearer ${token}`,
+            "Authorization": token,
             "X-APP-Key": env.BKASH_APP_KEY,
         };
     }
 
     async createPayment(payload: ProviderPaymentDto) {
         const headers = await this.getHeaders();
-
-        // if(payload.payment.currency !== "BDT") {
-        //     throw new BadRequestException("Currency not supported");
-        // }
 
         const response = await this.client.post<BkashCreatePaymentResponse>(
             "/checkout/create",
@@ -91,7 +90,6 @@ export class BkashStrategy {
                 callbackURL: `${env.SERVER_URL}/api/v1/payments/bkash/callback`,
                 amount: payload.payment.amount.toString(),
                 currency: "BDT",
-                // currency: payload.payment.currency,
                 intent: "sale",
                 merchantInvoiceNumber: payload.payment.id,
             },
@@ -113,26 +111,35 @@ export class BkashStrategy {
     async executePayment(paymentId: string) {
         const headers = await this.getHeaders();
 
-        const response = await this.client.post<BkashExecutePaymentResponse>(
-            `/checkout/execute/${paymentId}`,
-            {},
-            {
-                headers,
-            }
-        );
+        try {
+            const response =
+                await this.client.post<BkashExecutePaymentResponse>(
+                    "/checkout/execute",
+                    { paymentID: paymentId },
+                    { headers }
+                );
 
-        return response.data;
+            return response.data;
+        } catch (err: unknown) {
+            if (axios.isAxiosError(err) && err.response) {
+                throw new InternalServerErrorException(
+                    `bKash execute failed: ${err.response.status} ${JSON.stringify(
+                        err.response.data
+                    )}`
+                );
+            }
+
+            throw err;
+        }
     }
 
     async queryPayment(paymentId: string) {
         const headers = await this.getHeaders();
 
         const response = await this.client.post<BkashQueryPaymentResponse>(
-            `/checkout/payment/status/${paymentId}`,
-            {},
-            {
-                headers,
-            }
+            "/checkout/payment/status",
+            { paymentID: paymentId },
+            { headers }
         );
 
         return response.data;
