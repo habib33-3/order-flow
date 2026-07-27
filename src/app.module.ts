@@ -7,6 +7,7 @@ import { AppService } from "./app.service";
 import { validateEnv } from "./common/env/env";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { RedisModule } from "./common/redis/redis.module";
+import { CronJobModule } from "./jobs/cron-job.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { JwtGuard } from "./modules/auth/guards/jwt.guard";
 import { OrdersModule } from "./modules/orders/orders.module";
@@ -22,6 +23,7 @@ import { ProductsModule } from "./modules/products/products.module";
         ProductsModule,
         OrdersModule,
         PaymentModule,
+        CronJobModule,
     ],
     controllers: [AppController],
     providers: [

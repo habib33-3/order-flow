@@ -108,6 +108,7 @@ model Payment {
   currency       String          @default("USD")
   idempotencyKey String
   transactionId  String?
+  expiresAt      DateTime?
 
   orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
@@ -121,6 +122,7 @@ model Payment {
   @@unique([provider, idempotencyKey])
   @@unique([provider, transactionId])
   @@index([orderId])
+  @@index([status, expiresAt])
 }
 
 enum PaymentStatus {
