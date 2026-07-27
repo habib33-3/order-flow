@@ -30,6 +30,12 @@ const envSchema = z.object({
     STRIPE_SECRET_KEY: z.string(),
     STRIPE_WEBHOOK_SECRET: z.string(),
     CLIENT_URL: z.url().default("http://localhost:3000"),
+    BKASH_BASE_URL: z.url(),
+    BKASH_USERNAME: z.string(),
+    BKASH_PASSWORD: z.string(),
+    BKASH_APP_KEY: z.string(),
+    BKASH_APP_SECRET: z.string(),
+    SERVER_URL: z.url(),
 });
 
 export type Env = z.infer<typeof envSchema>;

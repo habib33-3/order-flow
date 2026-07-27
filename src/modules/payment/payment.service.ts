@@ -56,6 +56,7 @@ export class PaymentService {
                 id: payment.id,
                 currency: payment.currency,
                 idempotencyKey,
+                amount: payment.amount,
             },
             user: {
                 id: payload.userId,
@@ -63,6 +64,24 @@ export class PaymentService {
                 name: payload.user.name,
             },
         });
+
+        const providerPaymentId =
+            "transactionId" in result
+                ? result.transactionId
+                : "providerPaymentId" in result
+                  ? result.providerPaymentId
+                  : null;
+
+        if (providerPaymentId) {
+            await this.prisma.payment.update({
+                where: {
+                    id: payment.id,
+                },
+                data: {
+                    transactionId: providerPaymentId,
+                },
+            });
+        }
 
         return result;
     }

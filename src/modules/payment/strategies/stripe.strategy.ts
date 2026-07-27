@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import { Injectable } from "@nestjs/common";
 
 import { env } from "src/common/env/env";
@@ -70,9 +69,5 @@ export class StripeStrategy {
             transactionId: session.id,
             provider: this.provider,
         };
-    }
-
-    async verifyPayment() {
-        console.log("Stripe payment verified");
     }
 }

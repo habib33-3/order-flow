@@ -13,6 +13,7 @@ class PaymentDataDto {
     id: string;
     currency: string;
     idempotencyKey: string;
+    amount: Prisma.Decimal;
 }
 
 class PaymentUserDto {

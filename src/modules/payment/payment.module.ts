@@ -1,11 +1,13 @@
 import { Global, Module } from "@nestjs/common";
 
+import { BkashCallbackController } from "./bkash/bkash-callback.controller";
+import { BkashCallbackService } from "./bkash/bkash-callback.service";
 import { PaymentService } from "./payment.service";
 import { BkashStrategy } from "./strategies/bkash.strategy";
 import { StripeStrategy } from "./strategies/stripe.strategy";
 import { StripeService } from "./stripe.service";
-import { StripeWebhookController } from "./webhooks/stripe/stripe-webhook.controller";
-import { StripeWebhookService } from "./webhooks/stripe/stripe-webhook.service";
+import { StripeWebhookController } from "./stripe/stripe-webhook.controller";
+import { StripeWebhookService } from "./stripe/stripe-webhook.service";
 
 @Global()
 @Module({
@@ -15,8 +17,9 @@ import { StripeWebhookService } from "./webhooks/stripe/stripe-webhook.service";
         BkashStrategy,
         StripeService,
         StripeWebhookService,
+        BkashCallbackService,
     ],
     exports: [PaymentService],
-    controllers: [StripeWebhookController],
+    controllers: [StripeWebhookController, BkashCallbackController],
 })
 export class PaymentModule {}
