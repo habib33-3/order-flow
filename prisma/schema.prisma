@@ -21,10 +21,13 @@ model User {
   password String
   role     UserRole @default(USER)
 
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  orders    Order[]
-  payments  Payment[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  orders   Order[]
+  payments Payment[]
+
+  @@index([role])
 }
 
 enum UserRole {
@@ -44,6 +47,8 @@ model Product {
   createdAt  DateTime    @default(now())
   updatedAt  DateTime    @updatedAt
   orderItems OrderItem[]
+
+  @@index([status])
 }
 
 enum ProductStatus {
@@ -64,6 +69,8 @@ model OrderItem {
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
+
+  @@unique([orderId, productId])
 }
 
 model Order {
@@ -81,6 +88,9 @@ model Order {
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
   payments  Payment[]
+
+  @@index([userId])
+  @@index([status])
 }
 
 enum OrderStatus {
@@ -99,7 +109,7 @@ model Payment {
   idempotencyKey String
   transactionId  String?
 
-  orderId String 
+  orderId String
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   userId String

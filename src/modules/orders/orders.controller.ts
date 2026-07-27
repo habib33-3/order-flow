@@ -14,7 +14,7 @@ import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AdminGuard } from "src/common/guards/admin.guard";
 import { OrderStatus } from "src/generated/prisma/enums";
-import { JwtPayload } from "src/types/types";
+import { type JwtPayload } from "src/types/types";
 
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { OrdersService } from "./orders.service";
