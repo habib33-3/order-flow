@@ -82,6 +82,10 @@ export class BkashStrategy {
     async createPayment(payload: ProviderPaymentDto) {
         const headers = await this.getHeaders();
 
+        if (payload.payment.currency !== "BDT") {
+            throw new BadRequestException("Unsupported currency, ");
+        }
+
         const response = await this.client.post<BkashCreatePaymentResponse>(
             "/checkout/create",
             {
@@ -89,7 +93,7 @@ export class BkashStrategy {
                 payerReference: payload.user.id,
                 callbackURL: `${env.SERVER_URL}/api/v1/payments/bkash/callback`,
                 amount: payload.payment.amount.toString(),
-                currency: "BDT",
+                currency: payload.payment.currency,
                 intent: "sale",
                 merchantInvoiceNumber: payload.payment.id,
             },

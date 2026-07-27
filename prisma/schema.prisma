@@ -99,7 +99,7 @@ model Payment {
   idempotencyKey String
   transactionId  String?
 
-  orderId String
+  orderId String 
   order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
   userId String

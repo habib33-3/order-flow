@@ -59,4 +59,11 @@ export class CreateOrderDto {
     })
     @IsEnum(PaymentProvider)
     paymentProvider: PaymentProvider;
+
+    @ApiProperty({
+        description: "The currency to use for the order.",
+        example: "USD",
+    })
+    @IsString()
+    currency: string;
 }

@@ -36,4 +36,5 @@ export class PaymentDto {
     provider: PaymentProvider;
     items: PaymentItemDto[];
     user: PaymentUserDto;
+    currency: string;
 }

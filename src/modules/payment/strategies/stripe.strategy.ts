@@ -34,7 +34,7 @@ export class StripeStrategy {
             {
                 mode: "payment",
                 line_items: items,
-
+                currency: payload.payment.currency.toLowerCase(),
                 customer_email: payload.user.email,
 
                 metadata: {

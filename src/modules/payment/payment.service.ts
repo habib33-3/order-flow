@@ -46,6 +46,7 @@ export class PaymentService {
                 orderId: payload.orderId,
                 provider: payload.provider,
                 idempotencyKey,
+                currency: payload.currency,
             },
         });
 

@@ -1,11 +1,13 @@
 import {
     BadRequestException,
+    ForbiddenException,
     Injectable,
     NotFoundException,
 } from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
 import { OrderStatus, Prisma } from "src/generated/prisma/client";
+import { JwtPayload } from "src/types/types";
 
 import { PaymentService } from "../payment/payment.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
@@ -155,6 +157,7 @@ export class OrdersService {
             },
             userId,
             provider: payload.paymentProvider,
+            currency: payload.currency,
         });
 
         return checkout;
@@ -351,18 +354,30 @@ export class OrdersService {
         return canceledOrder;
     }
 
-    async getOrderById(id: string) {
+    async getOrderById(id: string, user: JwtPayload) {
         const order = await this.prisma.order.findUnique({
             where: {
                 id,
             },
             include: {
                 items: true,
+                payments: true,
+                user: {
+                    omit: {
+                        password: true,
+                    },
+                },
             },
         });
 
         if (!order) {
             throw new NotFoundException("Order not found");
+        }
+
+        if (order.userId !== user.sub && user.role !== "ADMIN") {
+            throw new ForbiddenException(
+                "You are not authorized to view this order"
+            );
         }
 
         return order;

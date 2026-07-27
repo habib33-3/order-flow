@@ -14,6 +14,7 @@ import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AdminGuard } from "src/common/guards/admin.guard";
 import { OrderStatus } from "src/generated/prisma/enums";
+import { JwtPayload } from "src/types/types";
 
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { OrdersService } from "./orders.service";
@@ -237,14 +238,15 @@ export class OrdersController {
     @Get(":id")
     @ApiOperation({
         summary: "Get an order by ID",
-        description: "Retrieve an order by its ID.",
+        description:
+            "Retrieve an order by its ID. Accessible to the order owner or an admin.",
     })
     @ApiParam({
         name: "id",
         type: String,
         description: "The ID of the order to retrieve.",
     })
-    async getOrder(@Param("id") id: string) {
-        return this.ordersService.getOrderById(id);
+    async getOrder(@Param("id") id: string, @CurrentUser() user: JwtPayload) {
+        return this.ordersService.getOrderById(id, user);
     }
 }

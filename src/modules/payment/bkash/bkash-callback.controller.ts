@@ -1,4 +1,5 @@
 import { Controller, Get, Query } from "@nestjs/common";
+import { ApiExcludeEndpoint } from "@nestjs/swagger";
 
 import { Public } from "src/common/decorators/public.decorator";
 
@@ -9,6 +10,7 @@ import { BkashCallbackService } from "./bkash-callback.service";
 export class BkashCallbackController {
     constructor(private readonly callbackService: BkashCallbackService) {}
 
+    @ApiExcludeEndpoint()
     @Get("callback")
     async callback(
         @Query("paymentID") paymentID: string,
