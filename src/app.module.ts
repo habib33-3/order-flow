@@ -16,7 +16,11 @@ import { ProductsModule } from "./modules/products/products.module";
 
 @Module({
     imports: [
-        ConfigModule.forRoot({ isGlobal: true, validate: validateEnv }),
+        ConfigModule.forRoot({
+            isGlobal: true,
+            validate: validateEnv,
+            // envFilePath: ".env.prod",
+        }),
         PrismaModule,
         RedisModule,
         AuthModule,
