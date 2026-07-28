@@ -31,24 +31,58 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         this.logger.log("Redis disconnected");
     }
 
-    async set(key: string, value: string, ttl?: number): Promise<void> {
-        if (ttl) {
-            await this.redis.set(key, value, "EX", ttl);
-            return;
+    async set<T>(key: string, value: T, ttl = 3600): Promise<void> {
+        await this.redis.set(key, JSON.stringify(value), "EX", ttl);
+    }
+
+    private reviveDates<T>(value: T): T {
+        if (typeof value === "string") {
+            const date = new Date(value);
+
+            if (!Number.isNaN(date.getTime()) && date.toISOString() === value) {
+                return date as T;
+            }
+
+            return value;
         }
 
-        await this.redis.set(key, value);
+        if (Array.isArray(value)) {
+            return value.map((item) => this.reviveDates(item)) as T;
+        }
+
+        if (value !== null && typeof value === "object") {
+            return Object.fromEntries(
+                Object.entries(value).map(([key, value]) => [
+                    key,
+                    this.reviveDates(value),
+                ])
+            ) as T;
+        }
+
+        return value;
     }
 
-    async get(key: string): Promise<string | null> {
-        return this.redis.get(key);
+    async get<T>(key: string): Promise<T | null> {
+        const value = await this.redis.get(key);
+
+        if (value === null) {
+            return null;
+        }
+
+        const parsedValue = JSON.parse(value) as T;
+
+        return this.reviveDates(parsedValue);
     }
 
-    async delete(key: string): Promise<void> {
-        await this.redis.del(key);
+    async delete(key: string): Promise<boolean> {
+        return (await this.redis.del(key)) > 0;
     }
 
-    async exists(key: string): Promise<boolean> {
+    async exists(key: string) {
         return (await this.redis.exists(key)) === 1;
+    }
+
+    async ttl(key: string): Promise<number> {
+        return this.redis.ttl(key);
     }
 }

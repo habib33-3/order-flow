@@ -9,6 +9,12 @@ import { JwtService } from "@nestjs/jwt";
 import * as argon2 from "argon2";
 import { env } from "src/common/env/env";
 import { PrismaService } from "src/common/prisma/prisma.service";
+import {
+    userCacheKeyWithEmail,
+    userCacheKeyWithId,
+} from "src/common/redis/cache-key";
+import { RedisService } from "src/common/redis/redis.service";
+import { User } from "src/generated/prisma/client";
 import { JwtPayload } from "src/types/types";
 
 import { LoginUserDto } from "./dto/login.dto";
@@ -18,13 +24,30 @@ import { RegisterUserDto } from "./dto/registration.dto";
 export class AuthService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly jwtService: JwtService
+        private readonly jwtService: JwtService,
+        private readonly redis: RedisService
     ) {}
 
     async getUserById(id: string) {
-        return this.prisma.user.findUnique({
+        const cacheKey = userCacheKeyWithId(id);
+
+        const cachedUser = await this.redis.get<User>(cacheKey);
+
+        if (cachedUser !== null) {
+            return cachedUser;
+        }
+
+        const dbUser = await this.prisma.user.findUnique({
             where: { id },
         });
+
+        if (!dbUser) {
+            throw new NotFoundException("User not found");
+        }
+
+        await this.redis.set(cacheKey, dbUser);
+
+        return dbUser;
     }
 
     private async generateAccessToken(payload: JwtPayload) {
@@ -69,14 +92,22 @@ export class AuthService {
     }
 
     async login(payload: LoginUserDto) {
-        const user = await this.prisma.user.findUnique({
-            where: {
-                email: payload.email,
-            },
-        });
+        const cacheKey = userCacheKeyWithEmail(payload.email);
 
-        if (!user) {
-            throw new UnauthorizedException("Invalid credentials");
+        let user = await this.redis.get<User>(cacheKey);
+
+        if (user === null) {
+            user = await this.prisma.user.findUnique({
+                where: {
+                    email: payload.email,
+                },
+            });
+
+            if (!user) {
+                throw new UnauthorizedException("Invalid credentials");
+            }
+
+            await this.redis.set(cacheKey, user);
         }
 
         const isPasswordValid = await argon2.verify(
@@ -100,6 +131,14 @@ export class AuthService {
     }
 
     async getCurrentUser(userId: string) {
+        const cacheKey = userCacheKeyWithId(userId);
+
+        const cachedUser = await this.redis.get<User>(cacheKey);
+
+        if (cachedUser !== null) {
+            return cachedUser;
+        }
+
         const user = await this.prisma.user.findUnique({
             where: {
                 id: userId,
@@ -112,6 +151,8 @@ export class AuthService {
         if (!user) {
             throw new NotFoundException("User not found");
         }
+
+        await this.redis.set(cacheKey, user);
 
         return user;
     }
