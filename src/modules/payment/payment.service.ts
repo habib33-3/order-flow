@@ -11,9 +11,9 @@ import {
     PaymentStatus,
 } from "src/generated/prisma/enums";
 
+import { BkashStrategy } from "./bkash/strategy/bkash.strategy";
 import { PaymentDto } from "./dto/payment.dto";
-import { BkashStrategy } from "./strategies/bkash.strategy";
-import { StripeStrategy } from "./strategies/stripe.strategy";
+import { StripeStrategy } from "./stripe/strategy/stripe.strategy";
 
 @Injectable()
 export class PaymentService {

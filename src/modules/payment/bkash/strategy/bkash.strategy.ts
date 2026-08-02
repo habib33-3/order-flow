@@ -9,13 +9,13 @@ import axios, { AxiosInstance } from "axios";
 import { env } from "src/common/env/env";
 import { PaymentProvider } from "src/generated/prisma/enums";
 
-import { ProviderPaymentDto } from "../dto/payment.dto";
+import { ProviderPaymentDto } from "../../dto/payment.dto";
 import {
     BkashCreatePaymentResponse,
     BkashExecutePaymentResponse,
     BkashQueryPaymentResponse,
     BkashTokenResponse,
-} from "./bkash.types";
+} from "../types/bkash.types";
 
 @Injectable()
 export class BkashStrategy {

@@ -5,7 +5,7 @@ import { PrismaService } from "src/common/prisma/prisma.service";
 import { PaymentProvider } from "src/generated/prisma/enums";
 import type Stripe from "stripe";
 
-import { ProviderPaymentDto } from "../dto/payment.dto";
+import { ProviderPaymentDto } from "../../dto/payment.dto";
 import { StripeService } from "../stripe.service";
 
 @Injectable()

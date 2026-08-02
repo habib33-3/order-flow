@@ -9,7 +9,7 @@ import { PrismaModule } from "./common/prisma/prisma.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { CronJobModule } from "./jobs/cron-job.module";
 import { AuthModule } from "./modules/auth/auth.module";
-import { JwtGuard } from "./modules/auth/guards/jwt.guard";
+import { AccessTokenGuard } from "./modules/auth/guards/access-token.guard";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
@@ -34,7 +34,7 @@ import { ProductsModule } from "./modules/products/products.module";
         AppService,
         {
             provide: APP_GUARD,
-            useClass: JwtGuard,
+            useClass: AccessTokenGuard,
         },
     ],
 })

@@ -4,7 +4,7 @@ import { PrismaService } from "src/common/prisma/prisma.service";
 import { PaymentProvider, PaymentStatus } from "src/generated/prisma/enums";
 
 import { PaymentService } from "../payment.service";
-import { BkashStrategy } from "../strategies/bkash.strategy";
+import { BkashStrategy } from "./strategy/bkash.strategy";
 
 @Injectable()
 export class BkashCallbackService {

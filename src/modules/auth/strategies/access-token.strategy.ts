@@ -9,7 +9,10 @@ import { AuthService } from "../auth.service";
 import { ACCESS_TOKEN } from "../constants/auth.constants";
 
 @Injectable()
-export class JwtStrategy extends PassportStrategy(Strategy, ACCESS_TOKEN) {
+export class AccessTokenStrategy extends PassportStrategy(
+    Strategy,
+    ACCESS_TOKEN
+) {
     constructor(private readonly auth: AuthService) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),

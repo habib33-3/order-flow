@@ -8,7 +8,7 @@ import { IS_PUBLIC_KEY } from "src/common/decorators/public.decorator";
 import { ACCESS_TOKEN } from "../constants/auth.constants";
 
 @Injectable()
-export class JwtGuard extends AuthGuard(ACCESS_TOKEN) {
+export class AccessTokenGuard extends AuthGuard(ACCESS_TOKEN) {
     constructor(private readonly reflector: Reflector) {
         super();
     }

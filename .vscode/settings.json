@@ -27,5 +27,6 @@
     "Wxll",
     "ywfu",
     "zwkhnrb"
-  ]
+  ],
+  "makefile.configureOnOpen": false
 }

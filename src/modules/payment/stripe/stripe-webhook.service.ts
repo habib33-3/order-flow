@@ -5,7 +5,7 @@ import { PrismaService } from "src/common/prisma/prisma.service";
 import type Stripe from "stripe";
 
 import { PaymentService } from "../payment.service";
-import { StripeService } from "../stripe.service";
+import { StripeService } from "./stripe.service";
 
 @Injectable()
 export class StripeWebhookService {
