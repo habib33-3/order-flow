@@ -7,6 +7,7 @@ import { Public } from "src/common/decorators/public.decorator";
 import { AuthService } from "./auth.service";
 import { LoginUserDto } from "./dto/login.dto";
 import { RegisterUserDto } from "./dto/registration.dto";
+import { VerifyOtpEmailDto } from "./dto/verify-otp.dto";
 
 @Controller("auth")
 export class AuthController {
@@ -22,6 +23,18 @@ export class AuthController {
     })
     async registerUser(@Body() payload: RegisterUserDto) {
         return this.authService.registerUser(payload);
+    }
+
+    @Public()
+    @Post("otp/verify")
+    @ApiOperation({
+        summary: "Verify OTP",
+        description: `Verifies a one-time password (OTP) sent to the user's email address. 
+            The OTP must match the one generated and sent by the system, and it must be used within its expiration time.`,
+        security: [],
+    })
+    async verifyOtp(@Body() payload: VerifyOtpEmailDto) {
+        return this.authService.verifyOtp(payload);
     }
 
     @Public()

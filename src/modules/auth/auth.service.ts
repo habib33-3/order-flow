@@ -1,3 +1,5 @@
+import { randomInt } from "node:crypto";
+
 import {
     BadRequestException,
     Injectable,
@@ -11,6 +13,7 @@ import { AuthEmailService } from "src/common/email/handler/auth/auth-email.servi
 import { env } from "src/common/env/env";
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
+    otpKeyWithEmail,
     userCacheKeyWithEmail,
     userCacheKeyWithId,
 } from "src/common/redis/cache-key";
@@ -20,6 +23,7 @@ import { JwtPayload } from "src/types/types";
 
 import { LoginUserDto } from "./dto/login.dto";
 import { RegisterUserDto } from "./dto/registration.dto";
+import { VerifyOtpEmailDto } from "./dto/verify-otp.dto";
 
 @Injectable()
 export class AuthService {
@@ -29,6 +33,10 @@ export class AuthService {
         private readonly redis: RedisService,
         private readonly authMail: AuthEmailService
     ) {}
+
+    private generateOtp(): string {
+        return randomInt(1000, 10000).toString();
+    }
 
     async getUserById(id: string) {
         const cacheKey = userCacheKeyWithId(id);
@@ -82,12 +90,81 @@ export class AuthService {
             },
         });
 
+        const otp = this.generateOtp();
+        const otpHash = await argon2.hash(otp);
+
+        const otpKey = otpKeyWithEmail(payload.email);
+
+        await this.redis.set(otpKey, otpHash, 600);
+
         await this.authMail.sentOtpEmail({
             receiverEmail: payload.email,
             receiverName: payload.name,
-            otp: 5353,
+            otp,
             expirationMinutes: 10,
         });
+
+        return {
+            message: "Registration successful. Please verify your email.",
+            userId: user.id,
+        };
+    }
+
+    private async getUserByEmail(email: string) {
+        const key = userCacheKeyWithEmail(email);
+
+        const cachedUser = await this.redis.get<User>(key);
+
+        if (cachedUser) {
+            return cachedUser;
+        }
+
+        const user = await this.prisma.user.findUnique({
+            where: {
+                email,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException("User not found");
+        }
+
+        await this.redis.set(key, user);
+
+        return user;
+    }
+
+    async verifyOtp(payload: VerifyOtpEmailDto) {
+        const otpKey = otpKeyWithEmail(payload.email);
+
+        const otpHash = await this.redis.get<string>(otpKey);
+
+        if (!otpHash) {
+            throw new UnauthorizedException("Invalid or expired OTP");
+        }
+
+        const isOtpValid = await argon2.verify(otpHash, payload.otp);
+
+        if (!isOtpValid) {
+            throw new UnauthorizedException("Invalid or expired OTP");
+        }
+
+        const user = await this.getUserByEmail(payload.email);
+
+        await this.prisma.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                status: "ACTIVE",
+            },
+        });
+
+        await Promise.all([
+            this.redis.delete(otpKey),
+            this.redis.delete(userCacheKeyWithId(user.id)),
+            this.redis.delete(userCacheKeyWithEmail(user.email)),
+        ]);
 
         const accessToken = await this.generateAccessToken({
             sub: user.id,
@@ -117,6 +194,10 @@ export class AuthService {
             }
 
             await this.redis.set(cacheKey, user);
+        }
+
+        if (user.status !== "ACTIVE") {
+            throw new UnauthorizedException("User is not active");
         }
 
         const isPasswordValid = await argon2.verify(

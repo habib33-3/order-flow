@@ -1,6 +1,6 @@
 export class SendOtpDto {
     receiverName: string;
-    otp: number;
+    otp: string;
     expirationMinutes: number;
     receiverEmail: string;
 }
