@@ -1,0 +1,267 @@
+<html lang="en">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+
+        <title>{{subject}}</title>
+
+        <style>
+            /* Reset */
+            body {
+                margin: 0;
+                padding: 0;
+                width: 100%;
+                background-color: #f4f7fb;
+                color: #1f2937;
+                font-family:
+                    -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto,
+                    Helvetica, Arial, sans-serif;
+                -webkit-font-smoothing: antialiased;
+            }
+
+            table {
+                border-spacing: 0;
+                border-collapse: collapse;
+            }
+
+            img {
+                max-width: 100%;
+                border: 0;
+            }
+
+            a {
+                color: #2563eb;
+                text-decoration: none;
+            }
+
+            /* Main wrapper */
+            .email-wrapper {
+                width: 100%;
+                padding: 40px 16px;
+                background-color: #f4f7fb;
+            }
+
+            .email-container {
+                width: 100%;
+                max-width: 600px;
+                margin: 0 auto;
+            }
+
+            /* Header */
+            .email-header {
+                padding: 0 0 24px;
+                text-align: center;
+            }
+
+            .brand {
+                color: #111827;
+                font-size: 24px;
+                font-weight: 700;
+                letter-spacing: -0.5px;
+            }
+
+            .brand-accent {
+                color: #2563eb;
+            }
+
+            /* Content card */
+            .email-card {
+                overflow: hidden;
+                background-color: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+            }
+
+            .email-content {
+                padding: 40px;
+            }
+
+            /* Typography */
+            .email-content h1 {
+                margin: 0 0 20px;
+                color: #111827;
+                font-size: 28px;
+                line-height: 1.3;
+                font-weight: 700;
+                letter-spacing: -0.5px;
+            }
+
+            .email-content h2 {
+                margin: 28px 0 12px;
+                color: #111827;
+                font-size: 20px;
+                line-height: 1.4;
+                font-weight: 600;
+            }
+
+            .email-content p {
+                margin: 0 0 16px;
+                color: #4b5563;
+                font-size: 16px;
+                line-height: 1.7;
+            }
+
+            .email-content strong {
+                color: #111827;
+            }
+
+            /* Button */
+            .button-wrapper {
+                margin: 28px 0;
+                text-align: center;
+            }
+
+            .button {
+                display: inline-block;
+                padding: 13px 24px;
+                background-color: #2563eb;
+                color: #ffffff !important;
+                border-radius: 8px;
+                font-size: 15px;
+                font-weight: 600;
+                line-height: 1.4;
+            }
+
+            /* Info box */
+            .info-box {
+                margin: 24px 0;
+                padding: 16px 20px;
+                background-color: #eff6ff;
+                border-left: 4px solid #2563eb;
+                border-radius: 6px;
+            }
+
+            .info-box p {
+                margin: 0;
+                color: #1e40af;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+
+            /* Warning box */
+            .warning-box {
+                margin: 24px 0;
+                padding: 16px 20px;
+                background-color: #fffbeb;
+                border-left: 4px solid #f59e0b;
+                border-radius: 6px;
+            }
+
+            .warning-box p {
+                margin: 0;
+                color: #92400e;
+                font-size: 14px;
+                line-height: 1.6;
+            }
+
+            /* Footer */
+            .email-footer {
+                padding: 24px 16px 0;
+                text-align: center;
+            }
+
+            .email-footer p {
+                margin: 0 0 8px;
+                color: #9ca3af;
+                font-size: 13px;
+                line-height: 1.6;
+            }
+
+            .footer-links {
+                margin-top: 12px;
+            }
+
+            .footer-links a {
+                color: #6b7280;
+                font-size: 13px;
+            }
+
+            .footer-divider {
+                margin: 0 8px;
+                color: #d1d5db;
+            }
+
+            /* Responsive */
+            @media only screen and (max-width: 600px) {
+                .email-wrapper {
+                    padding: 24px 12px;
+                }
+
+                .email-content {
+                    padding: 28px 20px;
+                }
+
+                .email-content h1 {
+                    font-size: 24px;
+                }
+
+                .email-content p {
+                    font-size: 15px;
+                }
+            }
+        </style>
+
+    </head>
+
+    <body>
+        <table
+            role="presentation"
+            width="100%"
+            cellpadding="0"
+            cellspacing="0"
+            border="0"
+        >
+            <tr>
+                <td class="email-wrapper">
+                    <div class="email-container">
+
+                        <!-- Header -->
+                        <div class="email-header">
+                            <div class="brand">
+                                {{brandName}}
+                            </div>
+                        </div>
+
+                        <!-- Main Card -->
+                        <div class="email-card">
+                            <div class="email-content">
+                                {{{body}}}
+                            </div>
+                        </div>
+
+                        <!-- Footer -->
+                        <div class="email-footer">
+                            <p>
+                                This email was sent by
+                                {{brandName}}.
+                            </p>
+
+                            <p>
+                                If you did not request this email, you can
+                                safely ignore it.
+                            </p>
+
+                            <div class="footer-links">
+                                {{#if websiteUrl}}
+                                    <a href="{{websiteUrl}}">
+                                        Visit Website
+                                    </a>
+                                {{/if}}
+
+                                {{#if supportEmail}}
+                                    <span class="footer-divider">•</span>
+                                    <a href="mailto:{{supportEmail}}">
+                                        Contact Support
+                                    </a>
+                                {{/if}}
+                            </div>
+                        </div>
+
+                    </div>
+                </td>
+            </tr>
+        </table>
+
+    </body>
+</html>

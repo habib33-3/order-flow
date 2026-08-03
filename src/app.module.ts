@@ -4,6 +4,7 @@ import { APP_GUARD } from "@nestjs/core";
 
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
+import { EmailModule } from "./common/email/email.module";
 import { validateEnv } from "./common/env/env";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { RedisModule } from "./common/redis/redis.module";
@@ -28,6 +29,7 @@ import { ProductsModule } from "./modules/products/products.module";
         OrdersModule,
         PaymentModule,
         CronJobModule,
+        EmailModule,
     ],
     controllers: [AppController],
     providers: [

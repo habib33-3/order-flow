@@ -7,6 +7,7 @@ import {
 import { JwtService } from "@nestjs/jwt";
 
 import * as argon2 from "argon2";
+import { AuthEmailService } from "src/common/email/handler/auth/auth-email.service";
 import { env } from "src/common/env/env";
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
@@ -25,7 +26,8 @@ export class AuthService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
-        private readonly redis: RedisService
+        private readonly redis: RedisService,
+        private readonly authMail: AuthEmailService
     ) {}
 
     async getUserById(id: string) {
@@ -78,6 +80,13 @@ export class AuthService {
                 email: payload.email,
                 password: hashedPassword,
             },
+        });
+
+        await this.authMail.sentOtpEmail({
+            receiverEmail: payload.email,
+            receiverName: payload.name,
+            otp: 5353,
+            expirationMinutes: 10,
         });
 
         const accessToken = await this.generateAccessToken({

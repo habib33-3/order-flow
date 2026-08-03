@@ -36,6 +36,9 @@ const envSchema = z.object({
     BKASH_APP_KEY: z.string(),
     BKASH_APP_SECRET: z.string(),
     SERVER_URL: z.url(),
+    RESEND_API_KEY: z.string(),
+    EMAIL_FROM_EMAIL: z.email(),
+    APP_NAME: z.string().default("OrderFlow"),
 });
 
 export type Env = z.infer<typeof envSchema>;
