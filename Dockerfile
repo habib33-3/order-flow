@@ -2,11 +2,12 @@ FROM node:24-alpine AS base
 
 WORKDIR /app
 
-RUN corepack enable
+ENV HUSKY=0
 
-COPY package.json pnpm-lock.yaml ./
-COPY prisma ./prisma
-COPY prisma.config.ts ./
+RUN corepack enable \
+    && corepack prepare pnpm@11.13.1 --activate
+
+COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 
 FROM base AS deps
 
@@ -14,27 +15,31 @@ RUN pnpm install --frozen-lockfile --ignore-scripts
 
 FROM deps AS builder
 
+COPY prisma ./prisma
+COPY prisma.config.ts ./
 COPY . .
 
 RUN pnpm prisma generate
-RUN pnpm run build
-RUN pnpm prune --prod --ignore-scripts
+RUN pnpm build
 
 FROM node:24-alpine AS runner
 
 WORKDIR /app
 
-RUN corepack enable
-
 ENV NODE_ENV=production
 
+RUN corepack enable \
+    && corepack prepare pnpm@11.13.1 --activate
+
 COPY --from=builder /app/package.json ./
-COPY --from=builder /app/prisma.config.ts ./
+COPY --from=builder /app/pnpm-lock.yaml ./
+COPY --from=builder /app/pnpm-workspace.yaml ./
+
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
-COPY --from=builder /app/src/generated ./src/generated
+COPY --from=builder /app/prisma.config.ts ./
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "pnpm prisma migrate deploy && node dist/src/main.js"]
+CMD ["pnpm", "start:prod"]
