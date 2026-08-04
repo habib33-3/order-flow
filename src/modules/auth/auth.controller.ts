@@ -71,9 +71,18 @@ export class AuthController {
     async refresh(@Req() req: Request) {
         const user = req.user as unknown as {
             userId: string;
-            refreshTokenId: string;
+            refreshToken: string;
         };
 
-        return this.authService.refreshToken(user.refreshTokenId, user.userId);
+        return this.authService.refreshToken(user.refreshToken, user.userId);
+    }
+
+    @Post("logout")
+    @ApiOperation({
+        summary: "Logout user",
+        description: "Invalidates the current refresh token",
+    })
+    async logout(@CurrentUser("sub") userId: string) {
+        return this.authService.logout(userId);
     }
 }

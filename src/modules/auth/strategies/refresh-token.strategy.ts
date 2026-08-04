@@ -1,9 +1,11 @@
 import { Injectable, UnauthorizedException } from "@nestjs/common";
 import { PassportStrategy } from "@nestjs/passport";
 
+import type { Request } from "express";
+
 import { ExtractJwt, Strategy } from "passport-jwt";
 import { env } from "src/common/env/env";
-import { refreshKeyWithJti } from "src/common/redis/cache-key";
+import { refreshKeyWithUserId } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
 import { RefreshTokenPayload } from "src/types/types";
 
@@ -24,27 +26,33 @@ export class RefreshTokenStrategy extends PassportStrategy(
             secretOrKey: env.REFRESH_TOKEN_SECRET,
             algorithms: ["HS256"],
             ignoreExpiration: false,
+            passReqToCallback: true,
         });
     }
 
-    async validate(payload: RefreshTokenPayload) {
+    async validate(req: Request, payload: RefreshTokenPayload) {
         if (payload.type !== "REFRESH_TOKEN") {
             throw new UnauthorizedException("Invalid token type");
         }
 
-        const userId = await this.redis.get<string>(
-            refreshKeyWithJti(payload.jti)
+        const refreshTokenExists = await this.redis.get<string>(
+            refreshKeyWithUserId(payload.sub)
         );
 
-        if (!userId || userId !== payload.sub) {
+        if (!refreshTokenExists || refreshTokenExists === null) {
             throw new UnauthorizedException("Invalid or expired refresh token");
         }
 
-        const user = await this.auth.getUserById(payload.sub);
+        const authorizationHeader = req.get("authorization");
+        const refreshToken = authorizationHeader?.startsWith("Bearer ")
+            ? authorizationHeader.split(" ")[1]
+            : undefined;
 
-        if (!user) {
+        if (!refreshToken) {
             throw new UnauthorizedException("Invalid refresh token");
         }
+
+        const user = await this.auth.getUserById(payload.sub);
 
         if (user.status !== "ACTIVE") {
             throw new UnauthorizedException("User is not active");
@@ -52,7 +60,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
 
         return {
             userId: user.id,
-            refreshTokenId: payload.jti,
+            refreshToken,
         };
     }
 }
