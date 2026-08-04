@@ -1,4 +1,4 @@
-import { randomInt } from "node:crypto";
+import { randomInt, randomUUID } from "node:crypto";
 
 import {
     BadRequestException,
@@ -9,17 +9,19 @@ import {
 import { JwtService } from "@nestjs/jwt";
 
 import * as argon2 from "argon2";
+import ms from "ms";
 import { AuthEmailService } from "src/common/email/handler/auth/auth-email.service";
 import { env } from "src/common/env/env";
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
     otpKeyWithEmail,
+    refreshKeyWithJti,
     userCacheKeyWithEmail,
     userCacheKeyWithId,
 } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
 import { User } from "src/generated/prisma/client";
-import { JwtPayload } from "src/types/types";
+import { JwtPayload, RefreshTokenPayload } from "src/types/types";
 
 import { LoginUserDto } from "./dto/login.dto";
 import { RegisterUserDto } from "./dto/registration.dto";
@@ -62,9 +64,45 @@ export class AuthService {
 
     private async generateAccessToken(payload: JwtPayload) {
         return this.jwtService.signAsync(payload, {
-            secret: env.JWT_SECRET,
-            expiresIn: env.JWT_EXPIRES,
+            secret: env.ACCESS_TOKEN_SECRET,
+            expiresIn: env.ACCESS_TOKEN_EXPIRES,
         });
+    }
+
+    private async generateRefreshToken(payload: RefreshTokenPayload) {
+        return this.jwtService.signAsync(payload, {
+            secret: env.REFRESH_TOKEN_SECRET,
+            expiresIn: env.REFRESH_TOKEN_EXPIRES,
+        });
+    }
+
+    private async generateTokens(user: User) {
+        const accessToken = await this.generateAccessToken({
+            sub: user.id,
+            role: user.role,
+            email: user.email,
+        });
+
+        const refreshTokenId = randomUUID();
+
+        const refreshToken = await this.generateRefreshToken({
+            sub: user.id,
+            jti: refreshTokenId,
+            type: "REFRESH_TOKEN",
+        });
+
+        const refreshTokenTtl = ms(env.REFRESH_TOKEN_EXPIRES) / 1000;
+
+        await this.redis.set(
+            refreshKeyWithJti(refreshTokenId),
+            user.id,
+            refreshTokenTtl
+        );
+
+        return {
+            accessToken,
+            refreshToken,
+        };
     }
 
     async registerUser(payload: RegisterUserDto) {
@@ -166,14 +204,11 @@ export class AuthService {
             this.redis.delete(userCacheKeyWithEmail(user.email)),
         ]);
 
-        const accessToken = await this.generateAccessToken({
-            sub: user.id,
-            role: user.role,
-            email: user.email,
-        });
+        const { accessToken, refreshToken } = await this.generateTokens(user);
 
         return {
             accessToken,
+            refreshToken,
         };
     }
 
@@ -209,14 +244,11 @@ export class AuthService {
             throw new UnauthorizedException("Invalid credentials");
         }
 
-        const accessToken = await this.generateAccessToken({
-            sub: user.id,
-            role: user.role,
-            email: user.email,
-        });
+        const { accessToken, refreshToken } = await this.generateTokens(user);
 
         return {
             accessToken,
+            refreshToken,
         };
     }
 
@@ -245,5 +277,26 @@ export class AuthService {
         await this.redis.set(cacheKey, user);
 
         return user;
+    }
+
+    async refreshToken(refreshTokenId: string, userId: string) {
+        const user = await this.getUserById(userId);
+
+        if (!user) {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        if (user.status !== "ACTIVE") {
+            throw new UnauthorizedException("User is not active");
+        }
+
+        await this.redis.delete(refreshKeyWithJti(refreshTokenId));
+
+        const { accessToken, refreshToken } = await this.generateTokens(user);
+
+        return {
+            accessToken,
+            refreshToken,
+        };
     }
 }
