@@ -1,4 +1,4 @@
-import { randomInt, randomUUID } from "node:crypto";
+import { randomInt } from "node:crypto";
 
 import {
     BadRequestException,
@@ -15,7 +15,7 @@ import { env } from "src/common/env/env";
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
     otpKeyWithEmail,
-    refreshKeyWithJti,
+    refreshKeyWithUserId,
     userCacheKeyWithEmail,
     userCacheKeyWithId,
 } from "src/common/redis/cache-key";
@@ -83,19 +83,16 @@ export class AuthService {
             email: user.email,
         });
 
-        const refreshTokenId = randomUUID();
-
         const refreshToken = await this.generateRefreshToken({
             sub: user.id,
-            jti: refreshTokenId,
             type: "REFRESH_TOKEN",
         });
 
-        const refreshTokenTtl = ms(env.REFRESH_TOKEN_EXPIRES) / 1000;
+        const refreshTokenTtl = ms(env.REFRESH_TOKEN_EXPIRES) / 1000 + 60;
 
         await this.redis.set(
-            refreshKeyWithJti(refreshTokenId),
-            user.id,
+            refreshKeyWithUserId(user.id),
+            refreshToken,
             refreshTokenTtl
         );
 
@@ -279,24 +276,37 @@ export class AuthService {
         return user;
     }
 
-    async refreshToken(refreshTokenId: string, userId: string) {
+    async refreshToken(storedRefreshToken: string, userId: string) {
         const user = await this.getUserById(userId);
-
-        if (!user) {
-            throw new UnauthorizedException("Invalid refresh token");
-        }
 
         if (user.status !== "ACTIVE") {
             throw new UnauthorizedException("User is not active");
         }
 
-        await this.redis.delete(refreshKeyWithJti(refreshTokenId));
+        const refreshTokenKey = refreshKeyWithUserId(userId);
 
-        const { accessToken, refreshToken } = await this.generateTokens(user);
+        const refreshToken = await this.redis.get<string>(refreshTokenKey);
+
+        if (!refreshToken || refreshToken !== storedRefreshToken) {
+            throw new UnauthorizedException("Invalid or expired refresh token");
+        }
+
+        await this.redis.delete(refreshTokenKey);
+
+        const { accessToken, refreshToken: newRefreshToken } =
+            await this.generateTokens(user);
 
         return {
             accessToken,
-            refreshToken,
+            refreshToken: newRefreshToken,
+        };
+    }
+
+    async logout(userId: string) {
+        await this.redis.delete(refreshKeyWithUserId(userId));
+
+        return {
+            message: "Logged out successfully",
         };
     }
 }

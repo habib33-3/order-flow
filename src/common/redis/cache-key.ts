@@ -7,8 +7,8 @@ const withPrefix = (...parts: string[]) =>
 export const otpKeyWithEmail = (email: string) =>
     withPrefix("auth", "otp", "email", email);
 
-export const refreshKeyWithJti = (jti: string) =>
-    withPrefix("auth", "refresh", "id", jti);
+export const refreshKeyWithUserId = (userId: string) =>
+    withPrefix("auth", "refresh", "id", userId);
 
 // user keys
 export const userCacheKeyWithEmail = (email: string) =>

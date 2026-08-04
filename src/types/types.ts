@@ -8,6 +8,6 @@ export type JwtPayload = {
 
 export type RefreshTokenPayload = {
     sub: string;
-    jti: string;
+
     type: "REFRESH_TOKEN";
 };
