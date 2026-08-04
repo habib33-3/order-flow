@@ -16,7 +16,7 @@ export class AccessTokenStrategy extends PassportStrategy(
     constructor(private readonly auth: AuthService) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
-            secretOrKey: env.JWT_SECRET,
+            secretOrKey: env.ACCESS_TOKEN_SECRET,
             algorithms: ["HS256"],
             ignoreExpiration: false,
         });
@@ -31,6 +31,10 @@ export class AccessTokenStrategy extends PassportStrategy(
 
         if (!user) {
             throw new UnauthorizedException("Invalid token");
+        }
+
+        if (user.status !== "ACTIVE") {
+            throw new UnauthorizedException("User is not active");
         }
 
         if (payload.role !== user.role) {

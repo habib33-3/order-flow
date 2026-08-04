@@ -49,6 +49,7 @@ const seedAdmin = async (password: string) => {
             email: "admin@demo.com",
             password,
             role: "ADMIN",
+            status: "ACTIVE",
         },
     });
 
@@ -66,6 +67,7 @@ const seedUser = async (password: string) => {
             email: "user@demo.com",
             password,
             role: "USER",
+            status: "ACTIVE",
         },
     });
 

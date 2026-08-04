@@ -32,12 +32,12 @@ export class RegisterUserDto {
     @ApiProperty({
         example: "123456",
         description: "The user's password",
-        minLength: 8,
+        minLength: 6,
         maxLength: 64,
     })
     @IsString()
     @IsNotEmpty()
-    @MinLength(8)
+    @MinLength(6)
     @MaxLength(64)
     password: string;
 }

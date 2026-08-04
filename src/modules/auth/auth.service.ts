@@ -1,3 +1,5 @@
+import { randomInt, randomUUID } from "node:crypto";
+
 import {
     BadRequestException,
     Injectable,
@@ -7,26 +9,36 @@ import {
 import { JwtService } from "@nestjs/jwt";
 
 import * as argon2 from "argon2";
+import ms from "ms";
+import { AuthEmailService } from "src/common/email/handler/auth/auth-email.service";
 import { env } from "src/common/env/env";
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
+    otpKeyWithEmail,
+    refreshKeyWithJti,
     userCacheKeyWithEmail,
     userCacheKeyWithId,
 } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
 import { User } from "src/generated/prisma/client";
-import { JwtPayload } from "src/types/types";
+import { JwtPayload, RefreshTokenPayload } from "src/types/types";
 
 import { LoginUserDto } from "./dto/login.dto";
 import { RegisterUserDto } from "./dto/registration.dto";
+import { VerifyOtpEmailDto } from "./dto/verify-otp.dto";
 
 @Injectable()
 export class AuthService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
-        private readonly redis: RedisService
+        private readonly redis: RedisService,
+        private readonly authMail: AuthEmailService
     ) {}
+
+    private generateOtp(): string {
+        return randomInt(1000, 10000).toString();
+    }
 
     async getUserById(id: string) {
         const cacheKey = userCacheKeyWithId(id);
@@ -52,9 +64,45 @@ export class AuthService {
 
     private async generateAccessToken(payload: JwtPayload) {
         return this.jwtService.signAsync(payload, {
-            secret: env.JWT_SECRET,
-            expiresIn: env.JWT_EXPIRES,
+            secret: env.ACCESS_TOKEN_SECRET,
+            expiresIn: env.ACCESS_TOKEN_EXPIRES,
         });
+    }
+
+    private async generateRefreshToken(payload: RefreshTokenPayload) {
+        return this.jwtService.signAsync(payload, {
+            secret: env.REFRESH_TOKEN_SECRET,
+            expiresIn: env.REFRESH_TOKEN_EXPIRES,
+        });
+    }
+
+    private async generateTokens(user: User) {
+        const accessToken = await this.generateAccessToken({
+            sub: user.id,
+            role: user.role,
+            email: user.email,
+        });
+
+        const refreshTokenId = randomUUID();
+
+        const refreshToken = await this.generateRefreshToken({
+            sub: user.id,
+            jti: refreshTokenId,
+            type: "REFRESH_TOKEN",
+        });
+
+        const refreshTokenTtl = ms(env.REFRESH_TOKEN_EXPIRES) / 1000;
+
+        await this.redis.set(
+            refreshKeyWithJti(refreshTokenId),
+            user.id,
+            refreshTokenTtl
+        );
+
+        return {
+            accessToken,
+            refreshToken,
+        };
     }
 
     async registerUser(payload: RegisterUserDto) {
@@ -80,14 +128,87 @@ export class AuthService {
             },
         });
 
-        const accessToken = await this.generateAccessToken({
-            sub: user.id,
-            role: user.role,
-            email: user.email,
+        const otp = this.generateOtp();
+        const otpHash = await argon2.hash(otp);
+
+        const otpKey = otpKeyWithEmail(payload.email);
+
+        await this.redis.set(otpKey, otpHash, 600);
+
+        await this.authMail.sentOtpEmail({
+            receiverEmail: payload.email,
+            receiverName: payload.name,
+            otp,
+            expirationMinutes: 10,
         });
 
         return {
+            message: "Registration successful. Please verify your email.",
+            userId: user.id,
+        };
+    }
+
+    private async getUserByEmail(email: string) {
+        const key = userCacheKeyWithEmail(email);
+
+        const cachedUser = await this.redis.get<User>(key);
+
+        if (cachedUser) {
+            return cachedUser;
+        }
+
+        const user = await this.prisma.user.findUnique({
+            where: {
+                email,
+            },
+        });
+
+        if (!user) {
+            throw new NotFoundException("User not found");
+        }
+
+        await this.redis.set(key, user);
+
+        return user;
+    }
+
+    async verifyOtp(payload: VerifyOtpEmailDto) {
+        const otpKey = otpKeyWithEmail(payload.email);
+
+        const otpHash = await this.redis.get<string>(otpKey);
+
+        if (!otpHash) {
+            throw new UnauthorizedException("Invalid or expired OTP");
+        }
+
+        const isOtpValid = await argon2.verify(otpHash, payload.otp);
+
+        if (!isOtpValid) {
+            throw new UnauthorizedException("Invalid or expired OTP");
+        }
+
+        const user = await this.getUserByEmail(payload.email);
+
+        await this.prisma.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                status: "ACTIVE",
+            },
+        });
+
+        await Promise.all([
+            this.redis.delete(otpKey),
+            this.redis.delete(userCacheKeyWithId(user.id)),
+            this.redis.delete(userCacheKeyWithEmail(user.email)),
+        ]);
+
+        const { accessToken, refreshToken } = await this.generateTokens(user);
+
+        return {
             accessToken,
+            refreshToken,
         };
     }
 
@@ -110,6 +231,10 @@ export class AuthService {
             await this.redis.set(cacheKey, user);
         }
 
+        if (user.status !== "ACTIVE") {
+            throw new UnauthorizedException("User is not active");
+        }
+
         const isPasswordValid = await argon2.verify(
             user.password,
             payload.password
@@ -119,14 +244,11 @@ export class AuthService {
             throw new UnauthorizedException("Invalid credentials");
         }
 
-        const accessToken = await this.generateAccessToken({
-            sub: user.id,
-            role: user.role,
-            email: user.email,
-        });
+        const { accessToken, refreshToken } = await this.generateTokens(user);
 
         return {
             accessToken,
+            refreshToken,
         };
     }
 
@@ -155,5 +277,26 @@ export class AuthService {
         await this.redis.set(cacheKey, user);
 
         return user;
+    }
+
+    async refreshToken(refreshTokenId: string, userId: string) {
+        const user = await this.getUserById(userId);
+
+        if (!user) {
+            throw new UnauthorizedException("Invalid refresh token");
+        }
+
+        if (user.status !== "ACTIVE") {
+            throw new UnauthorizedException("User is not active");
+        }
+
+        await this.redis.delete(refreshKeyWithJti(refreshTokenId));
+
+        const { accessToken, refreshToken } = await this.generateTokens(user);
+
+        return {
+            accessToken,
+            refreshToken,
+        };
     }
 }

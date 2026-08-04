@@ -20,6 +20,7 @@ model User {
   name     String
   password String
   role     UserRole @default(USER)
+  status   UserStatus @default(PENDING)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -33,6 +34,12 @@ model User {
 enum UserRole {
   ADMIN
   USER
+}
+
+enum UserStatus {
+  PENDING
+  ACTIVE
+  SUSPENDED
 }
 
 model Product {
