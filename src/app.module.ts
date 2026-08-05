@@ -14,6 +14,7 @@ import { AccessTokenGuard } from "./modules/auth/guards/access-token.guard";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
+import { UserModule } from "./modules/user/user.module";
 
 @Module({
     imports: [
@@ -30,6 +31,7 @@ import { ProductsModule } from "./modules/products/products.module";
         PaymentModule,
         CronJobModule,
         EmailModule,
+        UserModule,
     ],
     controllers: [AppController],
     providers: [

@@ -23,6 +23,7 @@ import { RedisService } from "src/common/redis/redis.service";
 import { User } from "src/generated/prisma/client";
 import { JwtPayload, RefreshTokenPayload } from "src/types/types";
 
+import { UserService } from "../user/user.service";
 import { LoginUserDto } from "./dto/login.dto";
 import { RegisterUserDto } from "./dto/registration.dto";
 import { VerifyOtpEmailDto } from "./dto/verify-otp.dto";
@@ -33,33 +34,12 @@ export class AuthService {
         private readonly prisma: PrismaService,
         private readonly jwtService: JwtService,
         private readonly redis: RedisService,
-        private readonly authMail: AuthEmailService
+        private readonly authMail: AuthEmailService,
+        private readonly userService: UserService
     ) {}
 
     private generateOtp(): string {
         return randomInt(1000, 10000).toString();
-    }
-
-    async getUserById(id: string) {
-        const cacheKey = userCacheKeyWithId(id);
-
-        const cachedUser = await this.redis.get<User>(cacheKey);
-
-        if (cachedUser !== null) {
-            return cachedUser;
-        }
-
-        const dbUser = await this.prisma.user.findUnique({
-            where: { id },
-        });
-
-        if (!dbUser) {
-            throw new NotFoundException("User not found");
-        }
-
-        await this.redis.set(cacheKey, dbUser);
-
-        return dbUser;
     }
 
     private async generateAccessToken(payload: JwtPayload) {
@@ -145,30 +125,6 @@ export class AuthService {
         };
     }
 
-    private async getUserByEmail(email: string) {
-        const key = userCacheKeyWithEmail(email);
-
-        const cachedUser = await this.redis.get<User>(key);
-
-        if (cachedUser) {
-            return cachedUser;
-        }
-
-        const user = await this.prisma.user.findUnique({
-            where: {
-                email,
-            },
-        });
-
-        if (!user) {
-            throw new NotFoundException("User not found");
-        }
-
-        await this.redis.set(key, user);
-
-        return user;
-    }
-
     async verifyOtp(payload: VerifyOtpEmailDto) {
         const otpKey = otpKeyWithEmail(payload.email);
 
@@ -184,7 +140,7 @@ export class AuthService {
             throw new UnauthorizedException("Invalid or expired OTP");
         }
 
-        const user = await this.getUserByEmail(payload.email);
+        const user = await this.userService.getUserByEmail(payload.email);
 
         await this.prisma.user.update({
             where: {
@@ -277,7 +233,7 @@ export class AuthService {
     }
 
     async refreshToken(storedRefreshToken: string, userId: string) {
-        const user = await this.getUserById(userId);
+        const user = await this.userService.getUserById(userId);
 
         if (user.status !== "ACTIVE") {
             throw new UnauthorizedException("User is not active");

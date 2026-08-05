@@ -7,6 +7,7 @@ import { ExtractJwt, Strategy } from "passport-jwt";
 import { env } from "src/common/env/env";
 import { refreshKeyWithUserId } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
+import { UserService } from "src/modules/user/user.service";
 import { RefreshTokenPayload } from "src/types/types";
 
 import { AuthService } from "../auth.service";
@@ -19,7 +20,8 @@ export class RefreshTokenStrategy extends PassportStrategy(
 ) {
     constructor(
         private readonly auth: AuthService,
-        private readonly redis: RedisService
+        private readonly redis: RedisService,
+        private readonly userService: UserService
     ) {
         super({
             jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
@@ -52,7 +54,7 @@ export class RefreshTokenStrategy extends PassportStrategy(
             throw new UnauthorizedException("Invalid refresh token");
         }
 
-        const user = await this.auth.getUserById(payload.sub);
+        const user = await this.userService.getUserById(payload.sub);
 
         if (user.status !== "ACTIVE") {
             throw new UnauthorizedException("User is not active");
