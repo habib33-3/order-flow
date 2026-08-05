@@ -9,6 +9,7 @@ import { Public } from "src/common/decorators/public.decorator";
 import { AuthService } from "./auth.service";
 import { LoginUserDto } from "./dto/login.dto";
 import { RegisterUserDto } from "./dto/registration.dto";
+import { ResendOtpDto } from "./dto/resend-otp.dto";
 import { VerifyOtpEmailDto } from "./dto/verify-otp.dto";
 import { RefreshTokenGuard } from "./guards/refresh-token.guard";
 
@@ -38,6 +39,18 @@ export class AuthController {
     })
     async verifyOtp(@Body() payload: VerifyOtpEmailDto) {
         return this.authService.verifyOtp(payload);
+    }
+
+    @Public()
+    @Post("otp/resend")
+    @ApiOperation({
+        summary: "Resend OTP",
+        description: `Resends a one-time password (OTP) to the user's email address. 
+            This endpoint can be used if the user did not receive the initial OTP or if it has expired.`,
+        security: [],
+    })
+    async resendOtp(@Body() payload: ResendOtpDto) {
+        return this.authService.resendOtp(payload.email);
     }
 
     @Public()

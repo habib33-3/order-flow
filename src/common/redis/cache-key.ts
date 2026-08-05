@@ -10,6 +10,9 @@ export const otpKeyWithEmail = (email: string) =>
 export const refreshKeyWithUserId = (userId: string) =>
     withPrefix("auth", "refresh", "id", userId);
 
+export const otpResendKey = (email: string) =>
+    withPrefix("auth", "otp", "resend", email);
+
 // user keys
 export const userCacheKeyWithEmail = (email: string) =>
     withPrefix("user", "email", email);
