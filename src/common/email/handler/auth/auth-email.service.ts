@@ -19,4 +19,17 @@ export class AuthEmailService {
             },
         });
     }
+
+    async sentForgotPasswordOtpEmail(payload: SendOtpDto) {
+        await this.mail.sendEmail({
+            to: payload.receiverEmail,
+            subject: "Reset Your Password",
+            template: "auth/reset-password",
+            context: {
+                name: payload.receiverName,
+                otp: payload.otp,
+                expirationMinutes: payload.expirationMinutes,
+            },
+        });
+    }
 }

@@ -53,6 +53,8 @@ const envSchema = z.object({
         )
         .transform((value) => value as ms.StringValue),
 
+    PASSWORD_RESET_TOKEN_SECRET: z.string(),
+
     // stripe
     STRIPE_SECRET_KEY: z.string(),
     STRIPE_WEBHOOK_SECRET: z.string(),

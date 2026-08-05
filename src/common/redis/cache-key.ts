@@ -13,6 +13,15 @@ export const refreshKeyWithUserId = (userId: string) =>
 export const otpResendKey = (email: string) =>
     withPrefix("auth", "otp", "resend", email);
 
+export const forgotPasswordOtpKey = (email: string) =>
+    withPrefix("auth", "forgot-password", "otp", email);
+
+export const forgotPasswordOtpResendKey = (email: string) =>
+    withPrefix("auth", "forgot-password", "otp", "resend", email);
+
+export const passwordResetTokenKey = (email: string) =>
+    withPrefix("auth", "password-reset", "token", email);
+
 // user keys
 export const userCacheKeyWithEmail = (email: string) =>
     withPrefix("user", "email", email);
