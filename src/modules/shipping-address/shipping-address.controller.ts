@@ -1,5 +1,5 @@
-import { Body, Controller, Post } from "@nestjs/common";
-import { ApiOperation } from "@nestjs/swagger";
+import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 
@@ -26,5 +26,45 @@ export class ShippingAddressController {
             payload,
             userId
         );
+    }
+
+    @Get()
+    @ApiOperation({
+        summary: "Get my shipping addresses",
+        description:
+            "Returns the authenticated user's shipping addresses with optional search.",
+    })
+    @ApiQuery({
+        name: "search",
+        required: false,
+        type: String,
+        description: "Search by address, city, state, country, or postal code.",
+    })
+    async getMyAddresses(
+        @CurrentUser("sub") userId: string,
+        @Query("search") search?: string
+    ) {
+        return this.shippingAddressService.getMyShippingAddresses(
+            userId,
+            search
+        );
+    }
+
+    @Get(":id")
+    @ApiOperation({
+        summary: "Get shipping address by ID",
+        description:
+            "Returns the shipping address with the specified ID for the authenticated user.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "Shipping address ID.",
+    })
+    async getShippingAddressById(
+        @Param("id") id: string,
+        @CurrentUser("sub") userId: string
+    ) {
+        return this.shippingAddressService.getShippingAddressById(id, userId);
     }
 }
