@@ -1,9 +1,19 @@
-import { Body, Controller, Get, Param, Post, Query } from "@nestjs/common";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+    Query,
+} from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 
 import { CreateShippingAddressDto } from "./dto/create-shipping-address.dto";
+import { UpdateShippingAddressDto } from "./dto/update-shipping-address.dto";
 import { ShippingAddressService } from "./shipping-address.service";
 
 @Controller("shipping-address")
@@ -66,5 +76,46 @@ export class ShippingAddressController {
         @CurrentUser("sub") userId: string
     ) {
         return this.shippingAddressService.getShippingAddressById(id, userId);
+    }
+
+    @Patch(":id")
+    @ApiOperation({
+        summary: "Update shipping address",
+        description:
+            "Updates the shipping address with the specified ID for the authenticated user.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "Shipping address ID.",
+    })
+    async updateShippingAddress(
+        @Param("id") id: string,
+        @Body() payload: UpdateShippingAddressDto,
+        @CurrentUser("sub") userId: string
+    ) {
+        return this.shippingAddressService.updateShippingAddress(
+            payload,
+            id,
+            userId
+        );
+    }
+
+    @Delete(":id")
+    @ApiOperation({
+        summary: "Delete shipping address",
+        description:
+            "Deletes the shipping address with the specified ID for the authenticated user.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "Shipping address ID.",
+    })
+    async deleteShippingAddress(
+        @Param("id") id: string,
+        @CurrentUser("sub") userId: string
+    ) {
+        return this.shippingAddressService.deleteShippingList(userId, id);
     }
 }

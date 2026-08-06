@@ -13,6 +13,7 @@ import { RedisService } from "src/common/redis/redis.service";
 import { Prisma, ShippingAddress } from "src/generated/prisma/client";
 
 import { CreateShippingAddressDto } from "./dto/create-shipping-address.dto";
+import { UpdateShippingAddressDto } from "./dto/update-shipping-address.dto";
 
 @Injectable()
 export class ShippingAddressService {
@@ -135,5 +136,51 @@ export class ShippingAddressService {
         await this.redis.set(cacheKey, shippingAddress);
 
         return shippingAddress;
+    }
+
+    async updateShippingAddress(
+        payload: UpdateShippingAddressDto,
+        id: string,
+        userId: string
+    ) {
+        await this.getShippingAddressById(id, userId);
+
+        const updatedShippingAddress = await this.prisma.shippingAddress.update(
+            {
+                where: {
+                    id,
+                },
+                data: payload,
+            }
+        );
+
+        await Promise.all([
+            this.redis.set(
+                shippingAddressCacheKeyWithId(id, userId),
+                updatedShippingAddress
+            ),
+            this.redis.delete(shippingAddressCacheKeyWithUserId(userId)),
+        ]);
+
+        return updatedShippingAddress;
+    }
+
+    async deleteShippingList(userId: string, id: string) {
+        await this.getShippingAddressById(id, userId);
+
+        await this.prisma.shippingAddress.delete({
+            where: {
+                id,
+            },
+        });
+
+        await Promise.all([
+            this.redis.delete(shippingAddressCacheKeyWithId(id, userId)),
+            this.redis.delete(shippingAddressCacheKeyWithUserId(userId)),
+        ]);
+
+        return {
+            message: "Shipping address deleted successfully",
+        };
     }
 }
