@@ -8,6 +8,8 @@ import {
 import { RedisService } from "src/common/redis/redis.service";
 import { User } from "src/generated/prisma/client";
 
+import { UpdateUserProfileDto } from "./dto/update-user.dto";
+
 @Injectable()
 export class UserService {
     constructor(
@@ -57,6 +59,23 @@ export class UserService {
         }
 
         await this.redis.set(key, user);
+
+        return user;
+    }
+
+    async updateUserProfile(userId: string, payload: UpdateUserProfileDto) {
+        const user = await this.prisma.user.update({
+            where: { id: userId },
+            data: payload,
+            omit: {
+                password: true,
+            },
+        });
+
+        await Promise.all([
+            this.redis.delete(userCacheKeyWithId(userId)),
+            this.redis.delete(userCacheKeyWithEmail(user.email)),
+        ]);
 
         return user;
     }
