@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from "@nestjs/common";
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
@@ -6,6 +10,7 @@ import {
     userCacheKeyWithId,
 } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
+import { UploadFileService } from "src/common/upload-file/upload-file.service";
 import { User } from "src/generated/prisma/client";
 
 import { UpdateUserProfileDto } from "./dto/update-user.dto";
@@ -14,7 +19,8 @@ import { UpdateUserProfileDto } from "./dto/update-user.dto";
 export class UserService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly redis: RedisService
+        private readonly redis: RedisService,
+        private readonly upload: UploadFileService
     ) {}
 
     async getUserById(id: string) {
@@ -67,6 +73,31 @@ export class UserService {
         const user = await this.prisma.user.update({
             where: { id: userId },
             data: payload,
+            omit: {
+                password: true,
+            },
+        });
+
+        await Promise.all([
+            this.redis.delete(userCacheKeyWithId(userId)),
+            this.redis.delete(userCacheKeyWithEmail(user.email)),
+        ]);
+
+        return user;
+    }
+
+    async changeAvatar(image: Express.Multer.File, userId: string) {
+        if (!image) {
+            throw new BadRequestException("Image is required");
+        }
+
+        const result = await this.upload.uploadFile(image, "avatars");
+
+        const user = await this.prisma.user.update({
+            where: { id: userId },
+            data: {
+                avatarUrl: result.url,
+            },
             omit: {
                 password: true,
             },

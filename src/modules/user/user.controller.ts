@@ -1,7 +1,8 @@
-import { Body, Controller, Patch } from "@nestjs/common";
-import { ApiOperation } from "@nestjs/swagger";
+import { Body, Controller, Patch, UploadedFile } from "@nestjs/common";
+import { ApiBody, ApiOperation } from "@nestjs/swagger";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
+import { UploadSingleFile } from "src/common/decorators/upload.decorator";
 
 import { UpdateUserProfileDto } from "./dto/update-user.dto";
 import { UserService } from "./user.service";
@@ -21,5 +22,29 @@ export class UserController {
         @Body() payload: UpdateUserProfileDto
     ) {
         return this.userService.updateUserProfile(userId, payload);
+    }
+
+    @Patch("me/avatar")
+    @ApiOperation({
+        summary: "Update user avatar",
+        description: "Updates the authenticated user's avatar.",
+    })
+    @ApiBody({
+        schema: {
+            type: "object",
+            properties: {
+                image: {
+                    type: "string",
+                    format: "binary",
+                },
+            },
+        },
+    })
+    @UploadSingleFile("image", "image")
+    async changeAvatar(
+        @CurrentUser("sub") userId: string,
+        @UploadedFile() image: Express.Multer.File
+    ) {
+        return this.userService.changeAvatar(image, userId);
     }
 }

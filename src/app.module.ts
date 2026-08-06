@@ -8,6 +8,7 @@ import { EmailModule } from "./common/email/email.module";
 import { validateEnv } from "./common/env/env";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { RedisModule } from "./common/redis/redis.module";
+import { UploadFileModule } from "./common/upload-file/upload-file.module";
 import { CronJobModule } from "./jobs/cron-job.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AccessTokenGuard } from "./modules/auth/guards/access-token.guard";
@@ -36,6 +37,7 @@ import { UserModule } from "./modules/user/user.module";
         UserModule,
         PasswordModule,
         ShippingAddressModule,
+        UploadFileModule,
     ],
     controllers: [AppController],
     providers: [
