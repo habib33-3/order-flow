@@ -2,6 +2,8 @@ import { randomInt } from "node:crypto";
 
 import {
     BadRequestException,
+    HttpException,
+    HttpStatus,
     Injectable,
     NotFoundException,
     UnauthorizedException,
@@ -15,6 +17,7 @@ import { env } from "src/common/env/env";
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
     otpKeyWithEmail,
+    otpResendKey,
     refreshKeyWithUserId,
     userCacheKeyWithEmail,
     userCacheKeyWithId,
@@ -123,6 +126,57 @@ export class AuthService {
             message: "Registration successful. Please verify your email.",
             userId: user.id,
         };
+    }
+
+    async resendOtp(email: string) {
+        const user = await this.userService.getUserByEmail(email);
+
+        if (!user) {
+            throw new NotFoundException("User not found");
+        }
+
+        if (user.status !== "PENDING") {
+            throw new BadRequestException("User is already active");
+        }
+
+        const resendKey = otpResendKey(email);
+
+        const canResend = await this.redis.setIfNotExists(resendKey, "1", 60);
+
+        if (!canResend) {
+            throw new HttpException(
+                "Please wait 60 seconds before requesting another OTP.",
+                HttpStatus.TOO_MANY_REQUESTS
+            );
+        }
+
+        const otpKey = otpKeyWithEmail(email);
+        const otp = this.generateOtp();
+
+        try {
+            const otpHash = await argon2.hash(otp);
+
+            await this.redis.set(otpKey, otpHash, 600);
+
+            await this.authMail.sentOtpEmail({
+                receiverEmail: email,
+                receiverName: user.name,
+                otp,
+                expirationMinutes: 10,
+            });
+
+            return {
+                message: "OTP resent successfully",
+            };
+        } catch (error) {
+            // Roll back so the user isn't locked out if email delivery fails
+            await Promise.all([
+                this.redis.delete(resendKey),
+                this.redis.delete(otpKey),
+            ]);
+
+            throw error;
+        }
     }
 
     async verifyOtp(payload: VerifyOtpEmailDto) {

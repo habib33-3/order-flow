@@ -35,6 +35,22 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         await this.redis.set(key, JSON.stringify(value), "EX", ttl);
     }
 
+    async setIfNotExists<T>(
+        key: string,
+        value: T,
+        ttl = 3600
+    ): Promise<boolean> {
+        const result = await this.redis.set(
+            key,
+            JSON.stringify(value),
+            "EX",
+            ttl,
+            "NX"
+        );
+
+        return result === "OK";
+    }
+
     private reviveDates<T>(value: T): T {
         if (typeof value === "string") {
             const date = new Date(value);

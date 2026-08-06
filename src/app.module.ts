@@ -11,9 +11,11 @@ import { RedisModule } from "./common/redis/redis.module";
 import { CronJobModule } from "./jobs/cron-job.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AccessTokenGuard } from "./modules/auth/guards/access-token.guard";
+import { PasswordModule } from "./modules/auth/password/password.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
+import { ShippingAddressModule } from "./modules/shipping-address/shipping-address.module";
 import { UserModule } from "./modules/user/user.module";
 
 @Module({
@@ -32,6 +34,8 @@ import { UserModule } from "./modules/user/user.module";
         CronJobModule,
         EmailModule,
         UserModule,
+        PasswordModule,
+        ShippingAddressModule,
     ],
     controllers: [AppController],
     providers: [
