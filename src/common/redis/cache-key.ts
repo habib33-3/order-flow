@@ -27,3 +27,11 @@ export const userCacheKeyWithEmail = (email: string) =>
     withPrefix("user", "email", email);
 
 export const userCacheKeyWithId = (id: string) => withPrefix("user", "id", id);
+
+// Shipping Address Keys
+
+export const shippingAddressCacheKeyWithUserId = (userId: string) =>
+    withPrefix("shipping-address", "userId", userId);
+
+export const shippingAddressCacheKeyWithId = (id: string) =>
+    withPrefix("shipping-address", "id", id);

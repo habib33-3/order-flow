@@ -15,6 +15,7 @@ import { PasswordModule } from "./modules/auth/password/password.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
+import { ShippingAddressModule } from "./modules/shipping-address/shipping-address.module";
 import { UserModule } from "./modules/user/user.module";
 
 @Module({
@@ -34,6 +35,7 @@ import { UserModule } from "./modules/user/user.module";
         EmailModule,
         UserModule,
         PasswordModule,
+        ShippingAddressModule,
     ],
     controllers: [AppController],
     providers: [
