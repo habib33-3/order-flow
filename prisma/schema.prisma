@@ -44,14 +44,15 @@ enum UserStatus {
 }
 
 model ShippingAddress {
-  id          String @id @default(cuid())
+  id    String @id @default(cuid())
+  title String
 
-  userId      String
-  address     String
-  city        String
-  state       String?
-  postalCode  String
-  country     String
+  userId     String
+  address    String
+  city       String
+  state      String?
+  postalCode String
+  country    String
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 

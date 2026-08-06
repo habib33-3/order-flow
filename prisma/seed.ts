@@ -24,12 +24,16 @@ const generateStock = (min = 10, max = 100) => {
 const cleanDatabase = async () => {
     console.log("🧹 Cleaning database...");
 
-    // OrderItem -> Order -> User/Product dependency chain
     const deletedOrderItems = await prisma.orderItem.deleteMany();
     console.log(`✅ Deleted ${deletedOrderItems.count} order item(s).`);
 
     const deletedOrders = await prisma.order.deleteMany();
     console.log(`✅ Deleted ${deletedOrders.count} order(s).`);
+
+    const deletedShippingAddresses = await prisma.shippingAddress.deleteMany();
+    console.log(
+        `✅ Deleted ${deletedShippingAddresses.count} shipping address(es).`
+    );
 
     const deletedProducts = await prisma.product.deleteMany();
     console.log(`✅ Deleted ${deletedProducts.count} product(s).`);
@@ -74,6 +78,35 @@ const seedUser = async (password: string) => {
     console.log(`✅ User created successfully: ${user.email}`);
 
     return user;
+};
+
+const seedShippingAddresses = async (userId: string) => {
+    console.log("📍 Creating shipping addresses...");
+
+    const result = await prisma.shippingAddress.createMany({
+        data: [
+            {
+                userId,
+                title: "Hogwarts",
+                address: "Gryffindor Tower, Hogwarts Castle",
+                city: "Hogsmeade",
+                state: "Scottish Highlands",
+                postalCode: "HP001",
+                country: "Wizarding World",
+            },
+            {
+                userId,
+                title: "The Shire",
+                address: "Bag End, Bagshot Row",
+                city: "Hobbiton",
+                state: "Westfarthing",
+                postalCode: "LOTR001",
+                country: "Middle-earth",
+            },
+        ],
+    });
+
+    console.log(`✅ Created ${result.count} shipping address(es).`);
 };
 
 const seedProducts = async () => {
@@ -265,6 +298,10 @@ const main = async () => {
 
     const admin = await seedAdmin(hashedPassword);
     const user = await seedUser(hashedPassword);
+
+    console.log("\n📍 Seeding shipping addresses...");
+
+    await seedShippingAddresses(user.id);
 
     console.log("\n🛒 Seeding products...");
 

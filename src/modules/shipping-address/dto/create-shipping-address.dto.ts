@@ -4,6 +4,13 @@ import { IsOptional, IsPostalCode, IsString, MaxLength } from "class-validator";
 
 export class CreateShippingAddressDto {
     @ApiProperty({
+        example: "Home",
+        description: "Address title",
+    })
+    @IsString()
+    title: string;
+
+    @ApiProperty({
         example: "123 Main Street, Apartment 4B",
         description: "Street address",
     })
