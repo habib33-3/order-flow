@@ -1,98 +1,270 @@
-<p align="center">
-  <a href="http://nestjs.com/" target="blank"><img src="https://nestjs.com/img/logo-small.svg" width="120" alt="Nest Logo" /></a>
-</p>
+<div align="center">
 
-[circleci-image]: https://img.shields.io/circleci/build/github/nestjs/nest/master?token=abc123def456
-[circleci-url]: https://circleci.com/gh/nestjs/nest
+# Order Flow
 
-  <p align="center">A progressive <a href="http://nodejs.org" target="_blank">Node.js</a> framework for building efficient and scalable server-side applications.</p>
-    <p align="center">
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/v/@nestjs/core.svg" alt="NPM Version" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/l/@nestjs/core.svg" alt="Package License" /></a>
-<a href="https://www.npmjs.com/~nestjscore" target="_blank"><img src="https://img.shields.io/npm/dm/@nestjs/common.svg" alt="NPM Downloads" /></a>
-<a href="https://circleci.com/gh/nestjs/nest" target="_blank"><img src="https://img.shields.io/circleci/build/github/nestjs/nest/master" alt="CircleCI" /></a>
-<a href="https://discord.gg/G7Qnnhy" target="_blank"><img src="https://img.shields.io/badge/discord-online-brightgreen.svg" alt="Discord"/></a>
-<a href="https://opencollective.com/nest#backer" target="_blank"><img src="https://opencollective.com/nest/backers/badge.svg" alt="Backers on Open Collective" /></a>
-<a href="https://opencollective.com/nest#sponsor" target="_blank"><img src="https://opencollective.com/nest/sponsors/badge.svg" alt="Sponsors on Open Collective" /></a>
-  <a href="https://paypal.me/kamilmysliwiec" target="_blank"><img src="https://img.shields.io/badge/Donate-PayPal-ff3f59.svg" alt="Donate us"/></a>
-    <a href="https://opencollective.com/nest#sponsor"  target="_blank"><img src="https://img.shields.io/badge/Support%20us-Open%20Collective-41B883.svg" alt="Support us"></a>
-  <a href="https://twitter.com/nestframework" target="_blank"><img src="https://img.shields.io/twitter/follow/nestframework.svg?style=social&label=Follow" alt="Follow us on Twitter"></a>
-</p>
-  <!--[![Backers on Open Collective](https://opencollective.com/nest/backers/badge.svg)](https://opencollective.com/nest#backer)
-  [![Sponsors on Open Collective](https://opencollective.com/nest/sponsors/badge.svg)](https://opencollective.com/nest#sponsor)-->
+**A production-ready e-commerce backend built with NestJS, TypeScript, PostgreSQL, and Prisma.**
 
-## Description
+Secure JWT auth, dual payment gateways (Stripe + bKash), Redis caching, background jobs, and a fully automated Docker + GitHub Actions CI/CD pipeline — built to demonstrate real-world backend architecture, not tutorial code.
 
-[Nest](https://github.com/nestjs/nest) framework TypeScript starter repository.
+[![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
+[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
+[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
+[![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis&logoColor=white)](https://redis.io/)
+[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#license)
 
-## Project setup
+[**Live API**](https://order-flow-ek0j.onrender.com) · [**Swagger Docs**](https://order-flow-ek0j.onrender.com/api/docs) · [**Report Issue**](https://github.com/habib33-3/order-flow/issues)
 
-```bash
-$ pnpm install
+</div>
+
+---
+
+## Highlights
+
+|                    |                                                                                              |
+| ------------------ | -------------------------------------------------------------------------------------------- |
+| 🔐 **Auth**        | JWT access/refresh rotation, Argon2 hashing, email OTP, role-based access (`ADMIN`, `USER`)  |
+| 💳 **Payments**    | Stripe + bKash behind a shared abstraction — Strategy Pattern for provider-agnostic checkout |
+| ⚡ **Performance** | Redis-backed caching and refresh-token storage, cursor-based pagination for orders           |
+| 🐳 **Infra**       | Fully Dockerized dev environment, GitHub Actions CI/CD with automated Prisma migrations      |
+| 📄 **Docs**        | Complete Swagger/OpenAPI spec, Zod-validated environment config                              |
+
+---
+
+## Architecture
+
+Modular NestJS application with PostgreSQL as the system of record and Redis for caching and short-lived state. External services (Stripe, bKash, Cloudinary, Resend) are isolated behind dedicated modules so no domain logic depends on a specific provider.
+
+```
+                              Client
+                                 │
+                                 ▼
+                       REST API (NestJS)
+                                 │
+      ┌───────────────┬─────────┴─────────┬───────────────┐
+      ▼                ▼                   ▼               ▼
+ Authentication   Products & Orders   Payment Module    User Module
+      │                │                   │               │
+      └────────────────┴─────────┬─────────┴───────────────┘
+                                  ▼
+                             Prisma ORM
+                                  │
+                                  ▼
+                             PostgreSQL
+                                  │
+                       ┌──────────┴──────────┐
+                       │      Redis Cache     │
+                       │  refresh tokens ·    │
+                       │  API response cache · │
+                       │  short-lived state    │
+                       └──────────┬──────────┘
+      ┌───────────────┬───────────┼───────────────┐
+      ▼                ▼          ▼               ▼
+ Cloudinary         Stripe       bKash          Resend
+ (images)         (payments)  (payments)      (email)
 ```
 
-## Compile and run the project
+**Cache-aside pattern:** every read checks Redis first; on a miss, the service queries PostgreSQL, populates the cache, then returns the response — keeping hot paths fast without sacrificing consistency.
 
-```bash
-# development
-$ pnpm run start
-
-# watch mode
-$ pnpm run start:dev
-
-# production mode
-$ pnpm run start:prod
+```
+Request → Cache hit? ──Yes──→ Return Redis data
+              │
+              No
+              ▼
+        Query PostgreSQL → Store in Redis → Return response
 ```
 
-## Run tests
+---
 
-```bash
-# unit tests
-$ pnpm run test
+## Tech Stack
 
-# e2e tests
-$ pnpm run test:e2e
+| Layer               | Technologies                           |
+| ------------------- | -------------------------------------- |
+| **Backend**         | NestJS 11, TypeScript 5, Node.js 24    |
+| **Database**        | PostgreSQL 17, Prisma ORM              |
+| **Auth**            | Passport JWT, Argon2                   |
+| **Cache**           | Redis, ioredis                         |
+| **Payments**        | Stripe, bKash (Tokenized Checkout)     |
+| **Storage / Email** | Cloudinary, Resend, Handlebars         |
+| **Validation**      | class-validator, Zod                   |
+| **Infra**           | Docker, Docker Compose, GitHub Actions |
+| **Package Manager** | pnpm                                   |
 
-# test coverage
-$ pnpm run test:cov
+---
+
+## Feature Overview
+
+**Authentication & Authorization** — JWT access/refresh tokens, email OTP verification, password reset flow, role-based guards, Argon2 password hashing.
+
+**Product Management** — Category CRUD, product CRUD, Cloudinary image uploads, inventory/stock tracking, product status lifecycle.
+
+**Order Management** — Order creation and cancellation, cursor-based pagination, shipping address management.
+
+**Payments** — Stripe Checkout, bKash Tokenized Checkout, unified webhook/callback handling, automatic payment expiration via scheduled jobs.
+
+**Infrastructure** — Redis caching, cron-driven background jobs, Swagger documentation, Docker & Docker Compose, GitHub Actions CI/CD.
+
+---
+
+## Key Engineering Decisions
+
+- **Strategy Pattern for payments** — Stripe and bKash implement a common interface, so adding a new provider doesn't touch order or checkout logic.
+- **Redis for both cache and session state** — refresh tokens and hot API responses share one cache layer, reducing infrastructure surface area.
+- **Zod-validated environment config** — the app fails fast at boot if required env vars are missing or malformed, instead of surfacing errors at runtime.
+- **Centralized exception handling** — consistent error shape across every module via a global filter.
+- **Automated migrations in CI** — `prisma migrate deploy` runs against Neon Postgres as part of the GitHub Actions pipeline, not manually.
+
+---
+
+## Technical Challenges Solved
+
+- JWT authentication with refresh token rotation and Redis-backed revocation
+- A common abstraction supporting multiple payment providers with different callback shapes
+- Idempotent handling of asynchronous payment webhooks
+- Automated, zero-touch production database migrations
+- A fully containerized local dev environment matching production topology
+
+---
+
+## Project Structure
+
+```text
+order-flow/
+├── prisma/
+│   ├── migrations/
+│   ├── schema.prisma
+│   └── seed.ts
+│
+├── src/
+│   ├── common/
+│   ├── generated/
+│   ├── jobs/
+│   ├── modules/
+│   │   ├── auth/
+│   │   ├── category/
+│   │   ├── orders/
+│   │   ├── payment/
+│   │   ├── products/
+│   │   ├── shipping-address/
+│   │   └── user/
+│   ├── app.module.ts
+│   └── main.ts
+│
+├── compose.yml
+├── Dockerfile
+├── prisma.config.ts
+└── package.json
 ```
 
-## Deployment
+---
 
-When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
+## Quick Start
 
-If you are looking for a cloud-based platform to deploy your NestJS application, check out [Mau](https://mau.nestjs.com), our official platform for deploying NestJS applications on AWS. Mau makes deployment straightforward and fast, requiring just a few simple steps:
+**Prerequisites:** Node.js 24+, pnpm, PostgreSQL 17, Redis (or use Docker below)
 
 ```bash
-$ pnpm install -g @nestjs/mau
-$ mau deploy
+# Clone
+git clone https://github.com/habib33-3/order-flow.git
+cd order-flow
+
+# Install
+pnpm install
+
+# Configure environment
+cp .env.example .env
+# → update the values in .env
+
+# Run migrations
+pnpm prisma migrate dev
+
+# (optional) seed demo data
+pnpm prisma db seed
+
+# Start dev server
+pnpm start:dev
 ```
 
-With Mau, you can deploy your application in just a few clicks, allowing you to focus on building features rather than managing infrastructure.
+API available at **<http://localhost:5000>** · Swagger at **<http://localhost:5000/api/docs>**
 
-## Resources
+### Docker Development
 
-Check out a few resources that may come in handy when working with NestJS:
+```bash
+# .env.docker is gitignored — create it from .env.example first
+cp .env.example .env.docker
 
-- Visit the [NestJS Documentation](https://docs.nestjs.com) to learn more about the framework.
-- For questions and support, please visit our [Discord channel](https://discord.gg/G7Qnnhy).
-- To dive deeper and get more hands-on experience, check out our official video [courses](https://courses.nestjs.com/).
-- Deploy your application to AWS with the help of [NestJS Mau](https://mau.nestjs.com) in just a few clicks.
-- Visualize your application graph and interact with the NestJS application in real-time using [NestJS Devtools](https://devtools.nestjs.com).
-- Need help with your project (part-time to full-time)? Check out our official [enterprise support](https://enterprise.nestjs.com).
-- To stay in the loop and get updates, follow us on [X](https://x.com/nestframework) and [LinkedIn](https://linkedin.com/company/nestjs).
-- Looking for a job, or have a job to offer? Check out our official [Jobs board](https://jobs.nestjs.com).
+docker compose up --build
+docker compose exec app pnpm prisma migrate deploy
+docker compose exec app pnpm prisma db seed # optional
+```
 
-## Support
+Update `.env.docker` with the same variables as `.env.example`, but point database and Redis connection strings to the Compose service hostnames (e.g. `postgres`, `redis`) instead of `localhost`. **Never commit this file or reuse production secrets in it.**
 
-Nest is an MIT-licensed open source project. It can grow thanks to the sponsors and support by the amazing backers. If you'd like to join them, please [read more here](https://docs.nestjs.com/support).
+App available at **<http://localhost:5000>**.
 
-## Stay in touch
+---
 
-- Author - [Kamil Myśliwiec](https://twitter.com/kammysliwiec)
-- Website - [https://nestjs.com](https://nestjs.com/)
-- Twitter - [@nestframework](https://twitter.com/nestframework)
+## Environment Variables
+
+Copy `.env.example` → `.env`. All variables are validated at startup with **Zod**, so misconfiguration fails fast instead of surfacing as a runtime bug.
+
+Configuration covers: PostgreSQL, Redis, JWT secrets, Stripe, bKash, Cloudinary, Resend, and client/server URLs.
+
+Generate JWT secrets with:
+
+```bash
+openssl rand -base64 32
+```
+
+---
+
+## Development Commands
+
+```bash
+pnpm start:dev # dev server with hot reload
+pnpm build     # production build
+pnpm lint      # lint check
+pnpm lint:fix  # lint + autofix
+pnpm format    # prettier
+pnpm test      # unit tests
+pnpm test:e2e  # e2e tests
+pnpm test:cov  # coverage report
+```
+
+---
+
+## Deployment & CI/CD
+
+Deployed on **Render**, with **PostgreSQL** (Neon), **Redis**, **Cloudinary**, **Stripe**, and **Resend** as managed dependencies.
+
+On every push to `main`, **GitHub Actions**:
+
+1. Builds the application
+2. Runs lint checks
+3. Deploys Prisma migrations against the production database
+4. Builds and publishes a Docker image to Docker Hub
+
+---
+
+## Roadmap
+
+- [x] JWT authentication with refresh rotation
+- [x] Role-based authorization
+- [x] Product management
+- [x] Order management
+- [x] Shipping addresses
+- [x] Stripe integration
+- [x] bKash integration
+- [x] Redis caching
+- [x] Docker support
+- [x] GitHub Actions CI/CD
+- [ ] BullMQ email queue
+- [ ] Inventory reservation
+- [ ] Order analytics dashboard
+- [ ] Comprehensive integration test suite
+
+---
 
 ## License
 
-Nest is [MIT licensed](https://github.com/nestjs/nest/blob/master/LICENSE).
+MIT License — see [LICENSE](LICENSE) for details.

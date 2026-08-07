@@ -16,6 +16,7 @@ import { UploadFileService } from "src/common/upload-file/upload-file.service";
 import { generateSku } from "src/common/utils/generate-sku";
 import { Prisma, Product, ProductStatus } from "src/generated/prisma/client";
 
+import { CategoryService } from "../category/category.service";
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductImageDto } from "./dto/update-product-image.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
@@ -25,7 +26,8 @@ export class ProductsService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly upload: UploadFileService,
-        private readonly redis: RedisService
+        private readonly redis: RedisService,
+        private readonly categoryService: CategoryService
     ) {}
 
     private readonly MAX_IMAGES = 5;
@@ -41,6 +43,14 @@ export class ProductsService {
             throw new BadRequestException(
                 "Thumbnail and at least one image is required"
             );
+        }
+
+        const category = await this.categoryService.getCategoryById(
+            payload.categoryId
+        );
+
+        if (!category) {
+            throw new NotFoundException("Category not found");
         }
 
         if ((images?.length ?? 0) > this.MAX_IMAGES) {
@@ -70,6 +80,7 @@ export class ProductsService {
                                 2
                             ),
                             stock: payload.stock,
+                            categoryId: payload.categoryId,
                             sku: generateSku(),
                             status: payload.status,
                             thumbnail: thumbnailResult.url,
@@ -183,6 +194,7 @@ export class ProductsService {
         filter?: {
             status?: ProductStatus;
         },
+        categoryId?: string,
         sort: "asc" | "desc" = "desc",
         sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt"
     ) {
@@ -194,7 +206,8 @@ export class ProductsService {
             limit,
             filter,
             sort,
-            sortBy
+            sortBy,
+            categoryId
         );
 
         const cached = await this.redis.get<{
@@ -211,6 +224,10 @@ export class ProductsService {
         }
 
         const where: Prisma.ProductWhereInput = {};
+
+        if (categoryId) {
+            where.categoryId = categoryId;
+        }
 
         if (search?.trim()) {
             const searchTerm = search.trim();

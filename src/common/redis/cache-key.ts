@@ -55,7 +55,8 @@ export const productListCacheKey = (
         status?: ProductStatus;
     },
     sort: "asc" | "desc" = "desc",
-    sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt"
+    sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt",
+    categoryId?: string
 ) => {
     return withPrefix(
         "product",
@@ -65,6 +66,14 @@ export const productListCacheKey = (
         limit,
         filter?.status,
         sort,
-        sortBy
+        sortBy,
+        categoryId
     );
 };
+
+// category
+export const categoryCacheKeyWithId = (id: string) =>
+    withPrefix("category", "id", id);
+
+export const categoryListCacheKey = (search?: string) =>
+    withPrefix("category", "list", search);

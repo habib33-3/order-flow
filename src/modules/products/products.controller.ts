@@ -147,6 +147,12 @@ export class ProductsController {
         example: "createdAt",
         default: "createdAt",
     })
+    @ApiQuery({
+        name: "categoryId",
+        type: String,
+        required: false,
+        description: "Filter products by their category.",
+    })
     async getAllProducts(
         @Query("search") search?: string,
 
@@ -185,15 +191,17 @@ export class ProductsController {
                 }
             )
         )
-        sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt"
+        sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt",
+
+        @Query("categoryId")
+        categoryId?: string
     ) {
         return this.productsService.getAllProducts(
             search,
             cursorId,
             limit,
-            {
-                status,
-            },
+            { status },
+            categoryId,
             sort,
             sortBy
         );
