@@ -73,4 +73,5 @@ export const productListCacheKey = (
 export const categoryCacheKeyWithId = (id: string) =>
     withPrefix("category", "id", id);
 
-export const categoryListCacheKey = () => withPrefix("category", "list");
+export const categoryListCacheKey = (search?: string) =>
+    withPrefix("category", "list", search);
