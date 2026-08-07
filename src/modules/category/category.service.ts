@@ -14,6 +14,7 @@ import { UploadFileService } from "src/common/upload-file/upload-file.service";
 import { Category, Prisma } from "src/generated/prisma/client";
 
 import { CreateCategoryDto } from "./dto/create-category.dto";
+import { UpdateCategoryDto } from "./dto/update-category.dto";
 
 @Injectable()
 export class CategoryService {
@@ -98,5 +99,39 @@ export class CategoryService {
         await this.redis.set(cacheKey, category);
 
         return category;
+    }
+
+    async updateCategory(
+        categoryId: string,
+        payload: UpdateCategoryDto,
+        logo?: Express.Multer.File
+    ) {
+        const category = await this.getCategoryById(categoryId);
+
+        let newLogoUrl = category.logo;
+
+        if (logo) {
+            const uploaded = await this.upload.uploadFile(logo, "categories");
+            newLogoUrl = uploaded.url;
+        }
+
+        const updatedCategory = await this.prisma.category.update({
+            where: { id: categoryId },
+            data: {
+                description: payload.description,
+                logo: newLogoUrl,
+            },
+        });
+
+        if (logo) {
+            await this.upload.deleteFile(category.logo);
+        }
+
+        await Promise.all([
+            this.redis.set(categoryCacheKeyWithId(categoryId), updatedCategory),
+            this.redis.delete(categoryListCacheKey()),
+        ]);
+
+        return updatedCategory;
     }
 }

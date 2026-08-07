@@ -3,6 +3,7 @@ import {
     Controller,
     Get,
     Param,
+    Patch,
     Post,
     Query,
     UploadedFile,
@@ -62,5 +63,20 @@ export class CategoryController {
     })
     async getCategoryById(@Param("id") id: string) {
         return this.categoryService.getCategoryById(id);
+    }
+
+    @Patch(":id")
+    @ApiOperation({
+        summary: "Update a category",
+        description:
+            "Updates an existing category's description and/or logo. The category name cannot be modified.",
+    })
+    @UploadSingleFile("image", "image")
+    async updateCategory(
+        @Param("id") id: string,
+        @Body() payload: CreateCategoryDto,
+        @UploadedFile() logo?: Express.Multer.File
+    ) {
+        return this.categoryService.updateCategory(id, payload, logo);
     }
 }
