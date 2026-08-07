@@ -202,6 +202,7 @@ export class AuthService {
             },
             data: {
                 status: "ACTIVE",
+                lastLoginAt: new Date(),
             },
         });
 
@@ -250,6 +251,15 @@ export class AuthService {
         if (!isPasswordValid) {
             throw new UnauthorizedException("Invalid credentials");
         }
+
+        await this.prisma.user.update({
+            where: {
+                id: user.id,
+            },
+            data: {
+                lastLoginAt: new Date(),
+            },
+        });
 
         const { accessToken, refreshToken } = await this.generateTokens(user);
 

@@ -13,12 +13,14 @@ export class UpdateProductImageDto {
         ],
     })
     @Transform(({ value }) => {
-        if (value === null) return undefined;
+        if (value === undefined || value === null || value === "") {
+            return undefined;
+        }
 
         if (typeof value === "string") {
             try {
                 const parsed = JSON.parse(value);
-                return Array.isArray(parsed) ? parsed : [value];
+                return Array.isArray(parsed) ? parsed : [parsed];
             } catch {
                 return [value];
             }

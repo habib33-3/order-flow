@@ -1,7 +1,11 @@
+import { ProductStatus } from "src/generated/prisma/enums";
+
 import { env } from "../env/env";
 
-const withPrefix = (...parts: string[]) =>
-    `${env.APP_NAME}-cache:${parts.join(":")}`;
+const withPrefix = (...parts: (string | number | undefined | null)[]) =>
+    `${env.APP_NAME}-cache:${parts
+        .filter((part) => part !== undefined && part !== null && part !== "")
+        .join(":")}`;
 
 // auth keys
 export const otpKeyWithEmail = (email: string) =>
@@ -37,3 +41,30 @@ export const shippingAddressCacheKeyWithUserId = (
 
 export const shippingAddressCacheKeyWithId = (id: string, userId: string) =>
     withPrefix("shipping-address", "id", id, userId);
+
+// products
+
+export const productCacheKeyWithId = (id: string) =>
+    withPrefix("product", "id", id);
+
+export const productListCacheKey = (
+    search = "",
+    cursorId?: string,
+    limit = 20,
+    filter?: {
+        status?: ProductStatus;
+    },
+    sort: "asc" | "desc" = "desc",
+    sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt"
+) => {
+    return withPrefix(
+        "product",
+        "list",
+        search,
+        cursorId,
+        limit,
+        filter?.status,
+        sort,
+        sortBy
+    );
+};

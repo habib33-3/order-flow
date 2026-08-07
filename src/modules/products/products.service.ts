@@ -7,9 +7,14 @@ import {
 
 import { Decimal } from "@prisma/client/runtime/client";
 import { PrismaService } from "src/common/prisma/prisma.service";
+import {
+    productCacheKeyWithId,
+    productListCacheKey,
+} from "src/common/redis/cache-key";
+import { RedisService } from "src/common/redis/redis.service";
 import { UploadFileService } from "src/common/upload-file/upload-file.service";
 import { generateSku } from "src/common/utils/generate-sku";
-import { Prisma, ProductStatus } from "src/generated/prisma/client";
+import { Prisma, Product, ProductStatus } from "src/generated/prisma/client";
 
 import { CreateProductDto } from "./dto/create-product.dto";
 import { UpdateProductImageDto } from "./dto/update-product-image.dto";
@@ -19,7 +24,8 @@ import { UpdateProductDto } from "./dto/update-product.dto";
 export class ProductsService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly upload: UploadFileService
+        private readonly upload: UploadFileService,
+        private readonly redis: RedisService
     ) {}
 
     private readonly MAX_IMAGES = 5;
@@ -56,7 +62,7 @@ export class ProductsService {
         try {
             for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
                 try {
-                    return await this.prisma.product.create({
+                    const product = await this.prisma.product.create({
                         data: {
                             name: payload.name,
                             description: payload.description,
@@ -70,6 +76,14 @@ export class ProductsService {
                             images: imageResults.map((img) => img.url),
                         },
                     });
+
+                    await Promise.all([
+                        this.redis.set(
+                            productCacheKeyWithId(product.id),
+                            product
+                        ),
+                        this.redis.delete(productListCacheKey()),
+                    ]);
                 } catch (error) {
                     if (
                         error instanceof Prisma.PrismaClientKnownRequestError &&
@@ -126,10 +140,17 @@ export class ProductsService {
             }),
         };
 
-        return this.prisma.product.update({
+        const updatedProduct = await this.prisma.product.update({
             where: { id: productId },
             data: updateData,
         });
+
+        await Promise.all([
+            this.redis.set(productCacheKeyWithId(product.id), updatedProduct),
+            this.redis.delete(productListCacheKey()),
+        ]);
+
+        return updatedProduct;
     }
 
     async deleteProduct(productId: string) {
@@ -144,6 +165,11 @@ export class ProductsService {
         await this.prisma.product.delete({
             where: { id: productId },
         });
+
+        await Promise.all([
+            this.redis.delete(productCacheKeyWithId(product.id)),
+            this.redis.delete(productListCacheKey()),
+        ]);
 
         return {
             message: "Product deleted successfully",
@@ -161,6 +187,28 @@ export class ProductsService {
         sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt"
     ) {
         limit = Math.min(Math.max(limit, 1), 50);
+
+        const cacheKey = productListCacheKey(
+            search,
+            cursorId,
+            limit,
+            filter,
+            sort,
+            sortBy
+        );
+
+        const cached = await this.redis.get<{
+            data: Product[];
+            meta: {
+                limit: number;
+                hasNextPage: boolean;
+                nextCursor: string | null;
+            };
+        }>(cacheKey);
+
+        if (cached) {
+            return cached;
+        }
 
         const where: Prisma.ProductWhereInput = {};
 
@@ -192,9 +240,7 @@ export class ProductsService {
             take: limit + 1,
 
             ...(cursorId && {
-                cursor: {
-                    id: cursorId,
-                },
+                cursor: { id: cursorId },
                 skip: 1,
             }),
 
@@ -214,7 +260,7 @@ export class ProductsService {
             products.pop();
         }
 
-        return {
+        const response = {
             data: products,
             meta: {
                 limit,
@@ -224,9 +270,21 @@ export class ProductsService {
                     : null,
             },
         };
+
+        await this.redis.set(cacheKey, response);
+
+        return response;
     }
 
     async getProductById(productId: string) {
+        const cacheKey = productCacheKeyWithId(productId);
+
+        const cached = await this.redis.get<Product>(cacheKey);
+
+        if (cached) {
+            return cached;
+        }
+
         const product = await this.prisma.product.findUnique({
             where: { id: productId },
         });
@@ -234,6 +292,8 @@ export class ProductsService {
         if (!product) {
             throw new NotFoundException("Product not found");
         }
+
+        await this.redis.set(cacheKey, product);
 
         return product;
     }
@@ -259,6 +319,11 @@ export class ProductsService {
 
         await this.upload.deleteFile(product.thumbnail);
 
+        await Promise.all([
+            this.redis.set(productCacheKeyWithId(product.id), updatedProduct),
+            this.redis.delete(productListCacheKey()),
+        ]);
+
         return updatedProduct;
     }
 
@@ -269,19 +334,30 @@ export class ProductsService {
     ) {
         const product = await this.getProductById(productId);
 
+        const removedImages = payload.removedImages ?? [];
+
+        // Ensure every removed image belongs to this product
+        const invalidImages = removedImages.filter(
+            (url) => !product.images.includes(url)
+        );
+
+        if (invalidImages.length > 0) {
+            throw new BadRequestException("Some images are invalid.");
+        }
+
         const remainingImages = product.images.filter(
-            (url) => !payload.removedImages?.includes(url)
+            (url) => !removedImages.includes(url)
         );
 
         const totalImages = remainingImages.length + images.length;
 
         if (totalImages === 0) {
-            throw new BadRequestException("At least one image is required");
+            throw new BadRequestException("At least one image is required.");
         }
 
         if (totalImages > this.MAX_IMAGES) {
             throw new BadRequestException(
-                `Max ${this.MAX_IMAGES} images are allowed`
+                `Maximum ${this.MAX_IMAGES} images are allowed.`
             );
         }
 
@@ -290,18 +366,40 @@ export class ProductsService {
                 ? await this.upload.uploadMultipleFiles(images, "products")
                 : [];
 
-        if (payload.removedImages?.length) {
-            await this.upload.deleteMultipleFiles(payload.removedImages);
-        }
+        try {
+            const updatedProduct = await this.prisma.product.update({
+                where: { id: productId },
+                data: {
+                    images: [
+                        ...remainingImages,
+                        ...uploadedImages.map((img) => img.url),
+                    ],
+                },
+            });
 
-        return this.prisma.product.update({
-            where: { id: productId },
-            data: {
-                images: [
-                    ...remainingImages,
-                    ...uploadedImages.map((image) => image.url),
-                ],
-            },
-        });
+            // Delete old images only after DB update succeeds
+            if (removedImages.length > 0) {
+                await this.upload.deleteMultipleFiles(removedImages);
+            }
+
+            await Promise.all([
+                this.redis.set(
+                    productCacheKeyWithId(product.id),
+                    updatedProduct
+                ),
+                this.redis.delete(productListCacheKey()),
+            ]);
+
+            return updatedProduct;
+        } catch (error) {
+            // Rollback newly uploaded images
+            if (uploadedImages.length > 0) {
+                await this.upload.deleteMultipleFiles(
+                    uploadedImages.map((img) => img.url)
+                );
+            }
+
+            throw error;
+        }
     }
 }
