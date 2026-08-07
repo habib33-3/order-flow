@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import {
+    BadRequestException,
+    Injectable,
+    InternalServerErrorException,
+    Logger,
+} from "@nestjs/common";
 
 import type { UploadApiResponse } from "cloudinary";
 
@@ -6,30 +11,38 @@ import cloudinary from "./cloudinary";
 
 @Injectable()
 export class UploadFileService {
+    private readonly logger = new Logger(UploadFileService.name);
+
     private async uploadBuffer(
         buffer: Buffer,
         folder: string
     ): Promise<UploadApiResponse> {
-        return new Promise((resolve, reject) => {
-            const stream = cloudinary.uploader.upload_stream(
-                { folder },
-                (error, result) => {
-                    if (error || !result) {
-                        reject(error);
-                        return;
-                    }
+        try {
+            return await new Promise((resolve, reject) => {
+                const stream = cloudinary.uploader.upload_stream(
+                    { folder },
+                    (error, result) => {
+                        if (error || !result) {
+                            return reject(error);
+                        }
 
-                    resolve(result);
-                }
+                        resolve(result);
+                    }
+                );
+
+                stream.end(buffer);
+            });
+        } catch (error) {
+            this.logger.error(
+                `Failed to upload file to folder "${folder}".`,
+                error instanceof Error ? error.stack : String(error)
             );
 
-            stream.end(buffer);
-        });
+            throw new InternalServerErrorException("Failed to upload file.");
+        }
     }
 
-    async uploadFile(file: Express.Multer.File, folder = "uploads") {
-        const result = await this.uploadBuffer(file.buffer, folder);
-
+    private mapUploadResult(result: UploadApiResponse) {
         return {
             url: result.secure_url,
             publicId: result.public_id,
@@ -37,21 +50,37 @@ export class UploadFileService {
         };
     }
 
+    async uploadFile(file: Express.Multer.File, folder = "uploads") {
+        this.logger.log(
+            `Uploading file "${file.originalname}" to folder "${folder}".`
+        );
+
+        const result = await this.uploadBuffer(file.buffer, folder);
+
+        this.logger.log(
+            `Uploaded file "${file.originalname}" successfully (publicId: ${result.public_id}).`
+        );
+
+        return this.mapUploadResult(result);
+    }
+
     async uploadMultipleFiles(
         files: Express.Multer.File[],
         folder = "uploads"
     ) {
-        return Promise.all(
-            files.map(async (file) => {
-                const result = await this.uploadBuffer(file.buffer, folder);
-
-                return {
-                    url: result.secure_url,
-                    publicId: result.public_id,
-                    resourceType: result.resource_type,
-                };
-            })
+        this.logger.log(
+            `Uploading ${files.length} file(s) to folder "${folder}".`
         );
+
+        const results = await Promise.all(
+            files.map(async (file) => this.uploadBuffer(file.buffer, folder))
+        );
+
+        this.logger.log(
+            `Successfully uploaded ${results.length} file(s) to folder "${folder}".`
+        );
+
+        return results.map((result) => this.mapUploadResult(result));
     }
 
     private extractPublicId(url: string): string {
@@ -65,10 +94,10 @@ export class UploadFileService {
 
             let publicId = pathname.slice(uploadIndex + "/upload/".length);
 
-            // Remove version if present (v123456789/)
+            // Remove version (e.g. v123456789/)
             publicId = publicId.replace(/^v\d+\//, "");
 
-            // Remove extension
+            // Remove file extension
             publicId = publicId.replace(/\.[^.]+$/, "");
 
             return publicId;
@@ -78,18 +107,65 @@ export class UploadFileService {
     }
 
     async deleteFile(url: string): Promise<void> {
-        if (!url) return;
+        if (!url) {
+            this.logger.warn("Delete skipped because URL is empty.");
+            return;
+        }
 
-        const publicId = this.extractPublicId(url);
+        try {
+            const publicId = this.extractPublicId(url);
 
-        await cloudinary.uploader.destroy(publicId);
+            this.logger.log(`Deleting file "${publicId}".`);
+
+            const result = await cloudinary.uploader.destroy(publicId);
+
+            if (result.result !== "ok" && result.result !== "not found") {
+                throw new Error(
+                    `Unexpected Cloudinary response: ${result.result}`
+                );
+            }
+
+            this.logger.log(
+                `Deleted file "${publicId}" (result: ${result.result}).`
+            );
+        } catch (error) {
+            this.logger.error(
+                `Failed to delete file "${url}".`,
+                error instanceof Error ? error.stack : String(error)
+            );
+
+            if (error instanceof BadRequestException) {
+                throw error;
+            }
+
+            throw new InternalServerErrorException("Failed to delete file.");
+        }
     }
 
     async deleteMultipleFiles(urls: string[]): Promise<void> {
         if (!urls?.length) {
+            this.logger.warn("Delete skipped because no URLs were provided.");
             return;
         }
 
-        await Promise.allSettled(urls.map(async (url) => this.deleteFile(url)));
+        this.logger.log(`Deleting ${urls.length} file(s).`);
+
+        const results = await Promise.allSettled(
+            urls.map(async (url) => this.deleteFile(url))
+        );
+
+        results.forEach((result, index) => {
+            if (result.status === "rejected") {
+                this.logger.error(
+                    // eslint-disable-next-line security/detect-object-injection
+                    `Failed to delete file "${urls[index]}".`,
+                    result.reason instanceof Error
+                        ? result.reason.stack
+                        : String(result.reason)
+                );
+            }
+        });
+
+        this.logger.log(`Finished deleting ${urls.length} file(s).`);
     }
 }

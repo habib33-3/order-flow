@@ -12,6 +12,7 @@ import { generateSku } from "src/common/utils/generate-sku";
 import { Prisma, ProductStatus } from "src/generated/prisma/client";
 
 import { CreateProductDto } from "./dto/create-product.dto";
+import { UpdateProductImageDto } from "./dto/update-product-image.dto";
 import { UpdateProductDto } from "./dto/update-product.dto";
 
 @Injectable()
@@ -235,5 +236,72 @@ export class ProductsService {
         }
 
         return product;
+    }
+
+    async changeProductThumbnail(
+        productId: string,
+        thumbnail: Express.Multer.File
+    ) {
+        if (!thumbnail) {
+            throw new BadRequestException("Thumbnail is required");
+        }
+
+        const product = await this.getProductById(productId);
+
+        const result = await this.upload.uploadFile(thumbnail, "products");
+
+        const updatedProduct = await this.prisma.product.update({
+            where: { id: productId },
+            data: {
+                thumbnail: result.url,
+            },
+        });
+
+        await this.upload.deleteFile(product.thumbnail);
+
+        return updatedProduct;
+    }
+
+    async updateProductImages(
+        productId: string,
+        payload: UpdateProductImageDto,
+        images: Express.Multer.File[]
+    ) {
+        const product = await this.getProductById(productId);
+
+        const remainingImages = product.images.filter(
+            (url) => !payload.removedImages?.includes(url)
+        );
+
+        const totalImages = remainingImages.length + images.length;
+
+        if (totalImages === 0) {
+            throw new BadRequestException("At least one image is required");
+        }
+
+        if (totalImages > this.MAX_IMAGES) {
+            throw new BadRequestException(
+                `Max ${this.MAX_IMAGES} images are allowed`
+            );
+        }
+
+        const uploadedImages =
+            images.length > 0
+                ? await this.upload.uploadMultipleFiles(images, "products")
+                : [];
+
+        if (payload.removedImages?.length) {
+            await this.upload.deleteMultipleFiles(payload.removedImages);
+        }
+
+        return this.prisma.product.update({
+            where: { id: productId },
+            data: {
+                images: [
+                    ...remainingImages,
+                    ...uploadedImages.map((image) => image.url),
+                ],
+            },
+        });
     }
 }
