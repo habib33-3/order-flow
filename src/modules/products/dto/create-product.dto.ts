@@ -42,6 +42,13 @@ export class CreateProductDto {
     price: number;
 
     @ApiProperty({
+        example: "cm123abc456def",
+        description: "The ID of the category to which the product belongs.",
+    })
+    @IsString()
+    categoryId: string;
+
+    @ApiProperty({
         example: 100,
         description: "The number of units currently available in stock.",
         minimum: 0,

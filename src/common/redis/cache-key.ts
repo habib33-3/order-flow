@@ -55,7 +55,8 @@ export const productListCacheKey = (
         status?: ProductStatus;
     },
     sort: "asc" | "desc" = "desc",
-    sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt"
+    sortBy: "price" | "stock" | "name" | "createdAt" = "createdAt",
+    categoryId?: string
 ) => {
     return withPrefix(
         "product",
@@ -65,7 +66,8 @@ export const productListCacheKey = (
         limit,
         filter?.status,
         sort,
-        sortBy
+        sortBy,
+        categoryId
     );
 };
 
