@@ -68,6 +68,11 @@ const envSchema = z.object({
 
     // resend
     RESEND_API_KEY: z.string(),
+
+    // cloudinary
+    CLOUDINARY_CLOUD_NAME: z.string(),
+    CLOUDINARY_API_KEY: z.string(),
+    CLOUDINARY_API_SECRET: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

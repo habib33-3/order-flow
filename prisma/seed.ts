@@ -112,6 +112,14 @@ const seedShippingAddresses = async (userId: string) => {
 const seedProducts = async () => {
     console.log("🛒 Creating products...");
 
+    const thumbnail = "https://picsum.photos/200/300";
+
+    const images = [
+        "https://picsum.photos/200/300",
+        "https://picsum.photos/200/300",
+        "https://picsum.photos/200/300",
+    ];
+
     const products = [
         {
             name: "Product 1",
@@ -119,6 +127,8 @@ const seedProducts = async () => {
             price: 10,
             sku: generateSku(),
             stock: generateStock(),
+            thumbnail,
+            images,
         },
         {
             name: "Product 2",
@@ -126,6 +136,8 @@ const seedProducts = async () => {
             price: 20,
             sku: generateSku(),
             stock: generateStock(),
+            thumbnail,
+            images,
         },
         {
             name: "Product 3",
@@ -133,6 +145,8 @@ const seedProducts = async () => {
             price: 30,
             sku: generateSku(),
             stock: generateStock(),
+            thumbnail,
+            images,
         },
     ];
 

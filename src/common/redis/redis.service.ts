@@ -20,19 +20,45 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
             this.logger.log("Redis connected");
         });
 
+        this.redis.on("ready", () => {
+            this.logger.log("Redis ready");
+        });
+
         this.redis.on("error", (error) => {
-            this.logger.error("Redis error", error);
+            this.logger.error("Redis error", error.stack);
+        });
+
+        this.redis.on("close", () => {
+            this.logger.warn("Redis connection closed");
+        });
+
+        this.redis.on("reconnecting", () => {
+            this.logger.warn("Redis reconnecting...");
+        });
+
+        this.redis.on("end", () => {
+            this.logger.warn("Redis connection ended");
         });
     }
 
     async onModuleDestroy(): Promise<void> {
-        await this.redis.quit();
-
-        this.logger.log("Redis disconnected");
+        try {
+            await this.redis.quit();
+            this.logger.log("Redis disconnected");
+        } catch (error) {
+            this.logger.error(
+                "Failed to disconnect Redis",
+                error instanceof Error ? error.stack : String(error)
+            );
+        }
     }
 
     async set<T>(key: string, value: T, ttl = 3600): Promise<void> {
-        await this.redis.set(key, JSON.stringify(value), "EX", ttl);
+        try {
+            await this.redis.set(key, JSON.stringify(value), "EX", ttl);
+        } catch (error) {
+            this.handleError("SET", key, error);
+        }
     }
 
     async setIfNotExists<T>(
@@ -40,15 +66,66 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         value: T,
         ttl = 3600
     ): Promise<boolean> {
-        const result = await this.redis.set(
-            key,
-            JSON.stringify(value),
-            "EX",
-            ttl,
-            "NX"
+        try {
+            const result = await this.redis.set(
+                key,
+                JSON.stringify(value),
+                "EX",
+                ttl,
+                "NX"
+            );
+
+            return result === "OK";
+        } catch (error) {
+            this.handleError("SET NX", key, error);
+        }
+    }
+
+    async get<T>(key: string): Promise<T | null> {
+        try {
+            const value = await this.redis.get(key);
+
+            if (value === null) {
+                return null;
+            }
+
+            return this.reviveDates(JSON.parse(value) as T);
+        } catch (error) {
+            this.handleError("GET", key, error);
+        }
+    }
+
+    async delete(key: string): Promise<boolean> {
+        try {
+            return (await this.redis.del(key)) > 0;
+        } catch (error) {
+            this.handleError("DEL", key, error);
+        }
+    }
+
+    async exists(key: string): Promise<boolean> {
+        try {
+            return (await this.redis.exists(key)) === 1;
+        } catch (error) {
+            this.handleError("EXISTS", key, error);
+        }
+    }
+
+    async ttl(key: string): Promise<number> {
+        try {
+            return await this.redis.ttl(key);
+        } catch (error) {
+            this.handleError("TTL", key, error);
+        }
+    }
+
+    private handleError(operation: string, key: string, error: unknown): never {
+        this.logger.error(
+            `Redis ${operation} failed for key "${key}"`,
+            error instanceof Error ? error.stack : String(error)
         );
 
-        return result === "OK";
+        throw error;
     }
 
     private reviveDates<T>(value: T): T {
@@ -76,29 +153,5 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
         }
 
         return value;
-    }
-
-    async get<T>(key: string): Promise<T | null> {
-        const value = await this.redis.get(key);
-
-        if (value === null) {
-            return null;
-        }
-
-        const parsedValue = JSON.parse(value) as T;
-
-        return this.reviveDates(parsedValue);
-    }
-
-    async delete(key: string): Promise<boolean> {
-        return (await this.redis.del(key)) > 0;
-    }
-
-    async exists(key: string) {
-        return (await this.redis.exists(key)) === 1;
-    }
-
-    async ttl(key: string): Promise<number> {
-        return this.redis.ttl(key);
     }
 }
