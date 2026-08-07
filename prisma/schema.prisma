@@ -15,19 +15,19 @@ datasource db {
 }
 
 model User {
-  id       String     @id @default(cuid())
-  email    String     @unique
+  id       String @id @default(cuid())
+  email    String @unique
   name     String
   password String
 
-  role     UserRole   @default(USER)
-  status   UserStatus @default(PENDING)
+  role   UserRole   @default(USER)
+  status UserStatus @default(PENDING)
 
-  phone     String?   @unique
+  phone     String? @unique
   avatarUrl String?
 
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
   lastLoginAt DateTime?
 
   orders            Order[]
@@ -68,25 +68,23 @@ model ShippingAddress {
 }
 
 model Product {
-  id          String        @id @default(cuid())
+  id String @id @default(cuid())
 
   name        String
-  sku         String        @unique
+  sku         String   @unique
   thumbnail   String
   images      String[]
-  description String        @db.Text
+  description String   @db.Text
 
-  price       Decimal       @db.Decimal(10, 2)
-  stock       Int           @default(0)
+  price Decimal @db.Decimal(10, 2)
+  stock Int     @default(0)
 
-  status      ProductStatus @default(DRAFT)
+  status ProductStatus @default(DRAFT)
 
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-
-  createdAt   DateTime      @default(now())
-  updatedAt   DateTime      @updatedAt
-
-  orderItems  OrderItem[]
+  orderItems OrderItem[]
 
   @@index([status])
 }
@@ -95,6 +93,16 @@ enum ProductStatus {
   DRAFT
   ACTIVE
   ARCHIVED
+}
+
+model Category {
+  id          String @id @default(cuid())
+  name        String @unique
+  description String?
+  logo        String
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 }
 
 model OrderItem {

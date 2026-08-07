@@ -68,3 +68,9 @@ export const productListCacheKey = (
         sortBy
     );
 };
+
+// category
+export const categoryCacheKeyWithId = (id: string) =>
+    withPrefix("category", "id", id);
+
+export const categoryListCacheKey = () => withPrefix("category", "list");
