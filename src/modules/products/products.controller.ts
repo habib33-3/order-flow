@@ -9,9 +9,11 @@ import {
     Patch,
     Post,
     Query,
+    UploadedFiles,
 } from "@nestjs/common";
 import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 
+import { UploadFileFields } from "src/common/decorators/upload.decorator";
 import { AdminGuard } from "src/common/guards/admin.guard";
 import { ProductStatus } from "src/generated/prisma/enums";
 
@@ -30,8 +32,26 @@ export class ProductsController {
         description:
             "Creates a new product with the provided name, description, price, stock, and status. A unique SKU is automatically generated for the product.",
     })
-    async createProduct(@Body() payload: CreateProductDto) {
-        return this.productsService.createProduct(payload);
+    @UploadFileFields(
+        [
+            { name: "thumbnail", maxCount: 1 },
+            { name: "images", maxCount: 5 },
+        ],
+        "image"
+    )
+    async createProduct(
+        @Body() payload: CreateProductDto,
+        @UploadedFiles()
+        files: {
+            thumbnail?: Express.Multer.File[];
+            images?: Express.Multer.File[];
+        }
+    ) {
+        return this.productsService.createProduct(
+            payload,
+            files.thumbnail?.[0],
+            files.images ?? []
+        );
     }
 
     @AdminGuard()

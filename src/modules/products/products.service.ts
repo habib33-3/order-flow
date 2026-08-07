@@ -1,4 +1,5 @@
 import {
+    BadRequestException,
     ConflictException,
     Injectable,
     NotFoundException,
@@ -6,6 +7,7 @@ import {
 
 import { Decimal } from "@prisma/client/runtime/client";
 import { PrismaService } from "src/common/prisma/prisma.service";
+import { UploadFileService } from "src/common/upload-file/upload-file.service";
 import { generateSku } from "src/common/utils/generate-sku";
 import { Prisma, ProductStatus } from "src/generated/prisma/client";
 
@@ -14,43 +16,85 @@ import { UpdateProductDto } from "./dto/update-product.dto";
 
 @Injectable()
 export class ProductsService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly upload: UploadFileService
+    ) {}
 
-    async createProduct(payload: CreateProductDto) {
+    private readonly MAX_IMAGES = 5;
+
+    async createProduct(
+        payload: CreateProductDto,
+        thumbnail?: Express.Multer.File,
+        images?: Express.Multer.File[]
+    ) {
         const MAX_RETRIES = 3;
 
-        for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-            try {
-                const decimalPrice = new Decimal(payload.price).toDecimalPlaces(
-                    2
-                );
+        if (!thumbnail || images?.length === 0) {
+            throw new BadRequestException(
+                "Thumbnail and at least one image is required"
+            );
+        }
 
-                return await this.prisma.product.create({
-                    data: {
-                        name: payload.name,
-                        description: payload.description,
-                        price: decimalPrice,
-                        stock: payload.stock,
-                        sku: generateSku(),
-                        status: payload.status,
-                    },
-                });
-            } catch (error) {
-                if (
-                    error instanceof Prisma.PrismaClientKnownRequestError &&
-                    error.code === "P2002"
-                ) {
-                    if (attempt === MAX_RETRIES - 1) {
+        if ((images?.length ?? 0) > this.MAX_IMAGES) {
+            throw new BadRequestException(
+                `Max ${this.MAX_IMAGES} images are allowed`
+            );
+        }
+
+        const thumbnailResult = await this.upload.uploadFile(
+            thumbnail,
+            "products"
+        );
+
+        const imageResults = await this.upload.uploadMultipleFiles(
+            images!,
+            "products"
+        );
+
+        try {
+            for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
+                try {
+                    return await this.prisma.product.create({
+                        data: {
+                            name: payload.name,
+                            description: payload.description,
+                            price: new Decimal(payload.price).toDecimalPlaces(
+                                2
+                            ),
+                            stock: payload.stock,
+                            sku: generateSku(),
+                            status: payload.status,
+                            thumbnail: thumbnailResult.url,
+                            images: imageResults.map((img) => img.url),
+                        },
+                    });
+                } catch (error) {
+                    if (
+                        error instanceof Prisma.PrismaClientKnownRequestError &&
+                        error.code === "P2002"
+                    ) {
+                        if (attempt < MAX_RETRIES - 1) {
+                            continue;
+                        }
+
                         throw new ConflictException(
-                            "Unable to generate a unique SKU after 3 attempts"
+                            "Unable to generate a unique SKU."
                         );
                     }
 
-                    continue;
+                    throw error;
                 }
-
-                throw error;
             }
+        } catch (error) {
+            await Promise.allSettled([
+                this.upload.deleteFile(thumbnailResult.url),
+                this.upload.deleteMultipleFiles(
+                    imageResults.map((img) => img.url)
+                ),
+            ]);
+
+            throw error;
         }
     }
 

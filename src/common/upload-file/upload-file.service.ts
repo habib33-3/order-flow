@@ -37,6 +37,23 @@ export class UploadFileService {
         };
     }
 
+    async uploadMultipleFiles(
+        files: Express.Multer.File[],
+        folder = "uploads"
+    ) {
+        return Promise.all(
+            files.map(async (file) => {
+                const result = await this.uploadBuffer(file.buffer, folder);
+
+                return {
+                    url: result.secure_url,
+                    publicId: result.public_id,
+                    resourceType: result.resource_type,
+                };
+            })
+        );
+    }
+
     private extractPublicId(url: string): string {
         try {
             const { pathname } = new URL(url);
@@ -66,5 +83,13 @@ export class UploadFileService {
         const publicId = this.extractPublicId(url);
 
         await cloudinary.uploader.destroy(publicId);
+    }
+
+    async deleteMultipleFiles(urls: string[]): Promise<void> {
+        if (!urls?.length) {
+            return;
+        }
+
+        await Promise.allSettled(urls.map(async (url) => this.deleteFile(url)));
     }
 }

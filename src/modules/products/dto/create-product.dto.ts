@@ -4,6 +4,7 @@ import {
     IsEnum,
     IsInt,
     IsNumber,
+    IsOptional,
     IsPositive,
     IsString,
     Min,
@@ -57,4 +58,23 @@ export class CreateProductDto {
     })
     @IsEnum(ProductStatus)
     status: ProductStatus;
+
+    @IsOptional()
+    @ApiProperty({
+        type: "string",
+        format: "binary",
+        description: "Product thumbnail image.",
+    })
+    thumbnail: Express.Multer.File;
+
+    @IsOptional()
+    @ApiProperty({
+        type: "array",
+        items: {
+            type: "string",
+            format: "binary",
+        },
+        description: "Additional product images.",
+    })
+    images: Express.Multer.File[];
 }

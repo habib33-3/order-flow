@@ -3,7 +3,11 @@ import {
     BadRequestException,
     UseInterceptors,
 } from "@nestjs/common";
-import { FileInterceptor, FilesInterceptor } from "@nestjs/platform-express";
+import {
+    FileFieldsInterceptor,
+    FileInterceptor,
+    FilesInterceptor,
+} from "@nestjs/platform-express";
 import { ApiConsumes } from "@nestjs/swagger";
 
 import { Request } from "express";
@@ -72,5 +76,29 @@ export const UploadMultipleFiles = (
             })
         ),
 
+        ApiConsumes("multipart/form-data")
+    );
+
+export const UploadFileFields = (
+    fields: {
+        name: string;
+        maxCount?: number;
+    }[],
+    type: UploadType = "all"
+) =>
+    applyDecorators(
+        UseInterceptors(
+            FileFieldsInterceptor(
+                fields.map((field) => ({
+                    name: field.name,
+                    maxCount: field.maxCount ?? 1,
+                })),
+                {
+                    storage,
+                    fileFilter: fileFilter(type),
+                    limits,
+                }
+            )
+        ),
         ApiConsumes("multipart/form-data")
     );
