@@ -131,7 +131,7 @@ export class PaymentService {
                     status: OrderStatus.PENDING,
                 },
                 data: {
-                    status: OrderStatus.PAID,
+                    status: OrderStatus.CONFIRMED,
                     paidAt: new Date(),
                 },
             });

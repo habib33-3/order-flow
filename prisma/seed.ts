@@ -237,7 +237,7 @@ const seedOrders = async (
             data: {
                 userId,
                 total: order1Total,
-                status: "PAID",
+                status: "CONFIRMED",
                 paidAt: new Date(),
                 items: {
                     create: [

@@ -149,7 +149,10 @@ model Order {
 
 enum OrderStatus {
   PENDING
-  PAID
+  CONFIRMED
+  PROCESSING
+  SHIPPED
+  DELIVERED
   CANCELED
 }
 

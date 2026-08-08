@@ -249,4 +249,60 @@ export class OrdersController {
     async getOrder(@Param("id") id: string, @CurrentUser() user: JwtPayload) {
         return this.ordersService.getOrderById(id, user);
     }
+
+    @AdminGuard()
+    @Patch(":id/processing")
+    @ApiOperation({
+        summary: "Mark an order as processing",
+        description:
+            "Mark an order as processing by its ID. Accessible to an admin.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "The ID of the order to mark as processing.",
+    })
+    async markOrderAsProcessing(
+        @Param("id") id: string,
+        @CurrentUser() user: JwtPayload
+    ) {
+        return this.ordersService.markOrderAsProcessing(id, user);
+    }
+
+    @AdminGuard()
+    @Patch(":id/shipped")
+    @ApiOperation({
+        summary: "Mark an order as shipped",
+        description:
+            "Mark an order as shipped by its ID. Accessible to an admin.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "The ID of the order to mark as shipped.",
+    })
+    async markOrderAsShipped(
+        @Param("id") id: string,
+        @CurrentUser() user: JwtPayload
+    ) {
+        return this.ordersService.markAsShipped(id, user);
+    }
+
+    @Patch(":id/delivered")
+    @ApiOperation({
+        summary: "Mark an order as delivered",
+        description:
+            "Marks a shipped order as delivered. Only the owner of the order can perform this action.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "The ID of the order to mark as delivered.",
+    })
+    async markOrderAsDelivered(
+        @Param("id") id: string,
+        @CurrentUser() user: JwtPayload
+    ) {
+        return this.ordersService.markAsDelivered(id, user);
+    }
 }

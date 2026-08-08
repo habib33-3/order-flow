@@ -382,4 +382,73 @@ export class OrdersService {
 
         return order;
     }
+
+    async markOrderAsProcessing(id: string, user: JwtPayload) {
+        const order = await this.getOrderById(id, user);
+
+        if (order.status !== "CONFIRMED") {
+            throw new BadRequestException(
+                "Only confirmed orders can be marked as processing"
+            );
+        }
+
+        await this.prisma.order.update({
+            where: { id },
+            data: {
+                status: "PROCESSING",
+            },
+        });
+
+        return {
+            message: "Order marked as processing",
+        };
+    }
+
+    async markAsShipped(id: string, user: JwtPayload) {
+        const order = await this.getOrderById(id, user);
+
+        if (order.status !== "PROCESSING") {
+            throw new BadRequestException(
+                "Only processing orders can be marked as shipped"
+            );
+        }
+
+        await this.prisma.order.update({
+            where: { id },
+            data: {
+                status: "SHIPPED",
+            },
+        });
+
+        return {
+            message: "Order marked as shipped",
+        };
+    }
+
+    async markAsDelivered(id: string, user: JwtPayload) {
+        const order = await this.getOrderById(id, user);
+
+        if (order.userId !== user.sub) {
+            throw new ForbiddenException(
+                "You are not authorized to mark this order"
+            );
+        }
+
+        if (order.status !== "SHIPPED") {
+            throw new BadRequestException(
+                "Only shipped orders can be marked as delivered"
+            );
+        }
+
+        await this.prisma.order.update({
+            where: { id },
+            data: {
+                status: "DELIVERED",
+            },
+        });
+
+        return {
+            message: "Order marked as delivered",
+        };
+    }
 }
