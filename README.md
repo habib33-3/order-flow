@@ -259,7 +259,7 @@ On every push to `main`, **GitHub Actions**:
 - [x] Docker support
 - [x] GitHub Actions CI/CD
 - [ ] BullMQ email queue
-- [ ] Inventory reservation
+- [x] Inventory reservation
 - [ ] Order analytics dashboard
 - [ ] Comprehensive integration test suite
 
