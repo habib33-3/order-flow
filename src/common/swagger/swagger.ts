@@ -3,11 +3,14 @@ import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
 import { ACCESS_TOKEN } from "src/modules/auth/constants/auth.constants";
 
+import * as packageJson from "../../../package.json";
+import { env } from "../env/env";
+
 export const setupSwagger = (app: INestApplication) => {
     const config = new DocumentBuilder()
-        .setTitle("API Documentation")
-        .setDescription("API Documentation")
-        .setVersion("1.0")
+        .setTitle(env.APP_NAME)
+        .setDescription(packageJson.description)
+        .setVersion(packageJson.version)
         .addBearerAuth(
             {
                 type: "http",
