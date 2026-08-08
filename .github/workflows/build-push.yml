@@ -1,4 +1,4 @@
-name: Build and Push to Dockerhub
+name: CI/CD — Build, Push & Deploy
 
 on:
   push:
@@ -88,3 +88,7 @@ jobs:
           labels: ${{ steps.meta.outputs.labels }}
           cache-from: type=gha
           cache-to: type=gha,mode=max
+
+      - name: Trigger Render deployment
+        if: success()
+        run: curl -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
