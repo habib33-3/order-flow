@@ -5,23 +5,26 @@ import {
 } from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
+import { cartCacheKeyWithUserId } from "src/common/redis/cache-key";
+import { RedisService } from "src/common/redis/redis.service";
+import { Cart } from "src/generated/prisma/client";
 
+import { ProductsService } from "../products/products.service";
 import { AddItemToCartDto } from "./dto/add-item-to-cart.dto";
 import { ManageCartDto } from "./dto/manage-cart.dto";
 
 @Injectable()
 export class CartService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly redis: RedisService,
+        private readonly productService: ProductsService
+    ) {}
 
     async addItemToCart(userId: string, payload: AddItemToCartDto) {
-        const product = await this.prisma.product.findUnique({
-            where: {
-                id: payload.productId,
-            },
-            select: {
-                id: true,
-            },
-        });
+        const product = await this.productService.getProductById(
+            payload.productId
+        );
 
         if (!product) {
             throw new NotFoundException("Product not found");
@@ -57,6 +60,8 @@ export class CartService {
                 quantity: 1,
             },
         });
+
+        await this.redis.delete(cartCacheKeyWithUserId(userId));
 
         return {
             message: "Product added to cart successfully",
@@ -126,12 +131,20 @@ export class CartService {
             }
         });
 
+        await this.redis.delete(cartCacheKeyWithUserId(userId));
+
         return {
             message: "Cart updated successfully",
         };
     }
 
     async getMyCart(userId: string) {
+        const cacheKey = cartCacheKeyWithUserId(userId);
+        const cachedCart = await this.redis.get<Cart[]>(cacheKey);
+        if (cachedCart !== null) {
+            return cachedCart;
+        }
+
         const cart = await this.prisma.cart.findUnique({
             where: {
                 userId,
@@ -154,6 +167,9 @@ export class CartService {
                 },
             },
         });
+
+        await this.redis.set(cacheKey, cart);
+
         return cart;
     }
 
@@ -176,6 +192,8 @@ export class CartService {
                 cartId: cart.id,
             },
         });
+
+        await this.redis.delete(cartCacheKeyWithUserId(userId));
 
         return {
             message: "Cart cleared successfully",

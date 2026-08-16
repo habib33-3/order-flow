@@ -13,8 +13,8 @@ export class CartController {
 
     @Post("add-item")
     @ApiOperation({
-        summary: "Add an item to the cart",
-        description: "Add an item to the cart",
+        summary: "Add item to cart",
+        description: "Adds a product to the authenticated user's cart.",
     })
     async addItemToCart(
         @CurrentUser("sub") userId: string,
@@ -25,8 +25,9 @@ export class CartController {
 
     @Patch("manage")
     @ApiOperation({
-        summary: "Manage the cart",
-        description: "Manage the cart",
+        summary: "Manage cart item",
+        description:
+            "Updates the quantity of an existing cart item or removes the item from the authenticated user's cart.",
     })
     async manageCart(
         @CurrentUser("sub") userId: string,
@@ -37,8 +38,9 @@ export class CartController {
 
     @Get()
     @ApiOperation({
-        summary: "Get my cart",
-        description: "Get my cart",
+        summary: "Get cart",
+        description:
+            "Returns the authenticated user's current cart and its items.",
     })
     async getMyCart(@CurrentUser("sub") userId: string) {
         return this.cartService.getMyCart(userId);
@@ -46,8 +48,8 @@ export class CartController {
 
     @Delete()
     @ApiOperation({
-        summary: "Clear the cart",
-        description: "Clear the cart",
+        summary: "Clear cart",
+        description: "Removes all items from the authenticated user's cart.",
     })
     async clearCart(@CurrentUser("sub") userId: string) {
         return this.cartService.clearCart(userId);
