@@ -13,6 +13,7 @@ import { CronJobModule } from "./jobs/cron-job.module";
 import { AuthModule } from "./modules/auth/auth.module";
 import { AccessTokenGuard } from "./modules/auth/guards/access-token.guard";
 import { PasswordModule } from "./modules/auth/password/password.module";
+import { CartModule } from "./modules/cart/cart.module";
 import { CategoryModule } from "./modules/category/category.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
@@ -40,6 +41,7 @@ import { UserModule } from "./modules/user/user.module";
         ShippingAddressModule,
         UploadFileModule,
         CategoryModule,
+        CartModule,
     ],
     controllers: [AppController],
     providers: [
