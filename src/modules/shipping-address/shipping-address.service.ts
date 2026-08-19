@@ -183,4 +183,20 @@ export class ShippingAddressService {
             message: "Shipping address deleted successfully",
         };
     }
+
+    async generateShippingAddress(id: string, userId: string) {
+        const shippingAddress = await this.getShippingAddressById(id, userId);
+
+        const formattedAddress = [
+            shippingAddress.address,
+            shippingAddress.city,
+            shippingAddress.state,
+            shippingAddress.postalCode,
+            shippingAddress.country,
+        ]
+            .filter(Boolean)
+            .join(", ");
+
+        return formattedAddress;
+    }
 }

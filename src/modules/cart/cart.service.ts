@@ -7,11 +7,11 @@ import {
 import { PrismaService } from "src/common/prisma/prisma.service";
 import { cartCacheKeyWithUserId } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
-import { Cart } from "src/generated/prisma/client";
 
 import { ProductsService } from "../products/products.service";
 import { AddItemToCartDto } from "./dto/add-item-to-cart.dto";
 import { ManageCartDto } from "./dto/manage-cart.dto";
+import { CartType } from "./type";
 
 @Injectable()
 export class CartService {
@@ -140,15 +140,15 @@ export class CartService {
 
     async getMyCart(userId: string) {
         const cacheKey = cartCacheKeyWithUserId(userId);
-        const cachedCart = await this.redis.get<Cart[]>(cacheKey);
+
+        const cachedCart = await this.redis.get<CartType>(cacheKey);
+
         if (cachedCart !== null) {
             return cachedCart;
         }
 
         const cart = await this.prisma.cart.findUnique({
-            where: {
-                userId,
-            },
+            where: { userId },
             select: {
                 id: true,
                 cartItems: {
@@ -158,7 +158,6 @@ export class CartService {
                             select: {
                                 id: true,
                                 name: true,
-
                                 price: true,
                                 thumbnail: true,
                             },
@@ -167,6 +166,10 @@ export class CartService {
                 },
             },
         });
+
+        if (!cart) {
+            throw new NotFoundException("Cart not found");
+        }
 
         await this.redis.set(cacheKey, cart);
 

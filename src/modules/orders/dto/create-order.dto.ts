@@ -1,55 +1,30 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-import { Type } from "class-transformer";
 import {
-    ArrayMinSize,
-    IsArray,
     IsEnum,
-    IsInt,
     IsNotEmpty,
-    IsPositive,
+    IsOptional,
     IsString,
-    ValidateNested,
+    MaxLength,
 } from "class-validator";
 import { PaymentProvider } from "src/generated/prisma/enums";
 
-export class OrderItemDto {
+export class CreateOrderDto {
     @ApiProperty({
-        description: "The ID of the product to add to the order.",
-        example: "cm123abc456def",
+        description: "The ID of the shipping address to use for the order.",
+        example: "550e8400-e29b-41d4-a716-446655440000",
     })
     @IsString()
     @IsNotEmpty()
-    productId: string;
+    shippingAddressId: string;
 
     @ApiProperty({
-        description: "The quantity of the product to order.",
-        example: 2,
-        minimum: 1,
+        description: "The ID of the cart to convert into an order.",
+        example: "550e8400-e29b-41d4-a716-446655440001",
     })
-    @IsInt()
-    @IsPositive()
-    quantity: number;
-}
-
-export class CreateOrderDto {
-    @ApiProperty({
-        description:
-            "List of products and their quantities to include in the order.",
-        type: [OrderItemDto],
-        minItems: 1,
-        example: [
-            {
-                productId: "cm123abc456def",
-                quantity: 2,
-            },
-        ],
-    })
-    @IsArray()
-    @ArrayMinSize(1)
-    @ValidateNested({ each: true })
-    @Type(() => OrderItemDto)
-    items: OrderItemDto[];
+    @IsString()
+    @IsNotEmpty()
+    cartId: string;
 
     @ApiProperty({
         description: "The payment provider to use for the order.",
@@ -61,9 +36,22 @@ export class CreateOrderDto {
     paymentProvider: PaymentProvider;
 
     @ApiProperty({
-        description: "The currency to use for the order.",
+        description: "The currency used for the order.",
         example: "USD",
+        minLength: 3,
+        maxLength: 3,
     })
     @IsString()
+    @IsNotEmpty()
     currency: string;
+
+    @ApiPropertyOptional({
+        description: "Optional note or instruction for the order.",
+        example: "Please deliver after 6 PM.",
+        maxLength: 500,
+    })
+    @IsOptional()
+    @IsString()
+    @MaxLength(500)
+    orderNote?: string;
 }

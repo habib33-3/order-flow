@@ -9,158 +9,40 @@ import { PrismaService } from "src/common/prisma/prisma.service";
 import { OrderStatus, Prisma } from "src/generated/prisma/client";
 import { JwtPayload } from "src/types/types";
 
-import { PaymentService } from "../payment/payment.service";
+import { ShippingAddressService } from "../shipping-address/shipping-address.service";
+import { CreateOrderService } from "./create-order.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 
 @Injectable()
 export class OrdersService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly payment: PaymentService
+        private readonly shippingAddressService: ShippingAddressService,
+        private readonly createOrderService: CreateOrderService
     ) {}
 
     async createOrder(userId: string, payload: CreateOrderDto) {
-        const productIds = payload.items.map((item) => item.productId);
+        const cartItems =
+            await this.createOrderService.getValidatedCartItems(userId);
 
-        const uniqueProductIds = new Set(productIds);
-
-        if (uniqueProductIds.size !== productIds.length) {
-            throw new BadRequestException(
-                "Each product can only appear once in an order"
-            );
-        }
-
-        const order = await this.prisma.$transaction(async (tx) => {
-            const products = await tx.product.findMany({
-                where: {
-                    id: {
-                        in: productIds,
-                    },
-                },
-            });
-
-            if (products.length !== productIds.length) {
-                throw new BadRequestException(
-                    "One or more products were not found"
-                );
-            }
-
-            const productMap = new Map(
-                products.map((product) => [product.id, product])
+        const shippingAddress =
+            await this.shippingAddressService.generateShippingAddress(
+                payload.shippingAddressId,
+                userId
             );
 
-            const items = payload.items.map((item) => {
-                const product = productMap.get(item.productId);
-
-                if (!product) {
-                    throw new BadRequestException(
-                        `Product ${item.productId} not found`
-                    );
-                }
-
-                if (product.status !== "ACTIVE") {
-                    throw new BadRequestException(
-                        `Product ${product.id} is not available`
-                    );
-                }
-
-                if (product.stock < item.quantity) {
-                    throw new BadRequestException(
-                        `Insufficient stock for product ${product.id}`
-                    );
-                }
-
-                return {
-                    productId: product.id,
-                    quantity: item.quantity,
-                    unitPrice: product.price,
-                    subtotal: product.price.mul(item.quantity),
-                };
-            });
-
-            const total = items.reduce(
-                (acc, item) => acc.add(item.subtotal),
-                new Prisma.Decimal(0)
-            );
-
-            const order = await tx.order.create({
-                data: {
-                    userId,
-                    total,
-                    items: {
-                        createMany: {
-                            data: items,
-                        },
-                    },
-                },
-                select: {
-                    id: true,
-                    total: true,
-                    user: {
-                        select: { id: true, name: true, email: true },
-                    },
-                    items: {
-                        select: {
-                            productId: true,
-                            quantity: true,
-                            unitPrice: true,
-                            product: {
-                                select: {
-                                    name: true,
-                                },
-                            },
-                        },
-                    },
-                },
-            });
-
-            for (const item of payload.items) {
-                const result = await tx.product.updateMany({
-                    where: {
-                        id: item.productId,
-                        stock: {
-                            gte: item.quantity,
-                        },
-                    },
-                    data: {
-                        stock: {
-                            decrement: item.quantity,
-                        },
-                    },
-                });
-
-                if (result.count === 0) {
-                    throw new BadRequestException(
-                        `Insufficient stock for product ${item.productId}`
-                    );
-                }
-            }
-
-            return order;
-        });
-
-        const checkout = await this.payment.createPayment({
-            items: order.items.map((item) => ({
-                productId: item.productId,
-                quantity: item.quantity,
-                unitPrice: item.unitPrice,
-                product: {
-                    name: item.product.name,
-                },
-            })),
-            amount: order.total.toNumber(),
-            orderId: order.id,
-            user: {
-                id: userId,
-                email: order.user.email,
-                name: order.user.name,
-            },
+        const order = await this.createOrderService.createOrderAndReserveStock(
             userId,
-            provider: payload.paymentProvider,
-            currency: payload.currency,
-        });
+            cartItems,
+            shippingAddress,
+            payload.orderNote
+        );
 
-        return checkout;
+        return this.createOrderService.createPaymentCheckout(
+            order,
+            userId,
+            payload
+        );
     }
 
     private async getOrders(
