@@ -5,7 +5,6 @@ import { Prisma, Product } from "src/generated/prisma/client";
 
 import { CartService } from "../cart/cart.service";
 import { PaymentService } from "../payment/payment.service";
-import { ShippingAddressService } from "../shipping-address/shipping-address.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { CreatedOrder, OrderCartItem } from "./type";
 
@@ -14,7 +13,6 @@ export class CreateOrderService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly cartService: CartService,
-        private readonly shippingAddressService: ShippingAddressService,
         private readonly payment: PaymentService
     ) {}
 

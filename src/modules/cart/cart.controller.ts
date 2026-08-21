@@ -1,5 +1,13 @@
-import { Body, Controller, Delete, Get, Patch, Post } from "@nestjs/common";
-import { ApiOperation } from "@nestjs/swagger";
+import {
+    Body,
+    Controller,
+    Delete,
+    Get,
+    Param,
+    Patch,
+    Post,
+} from "@nestjs/common";
+import { ApiOperation, ApiParam } from "@nestjs/swagger";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 
@@ -44,6 +52,24 @@ export class CartController {
     })
     async getMyCart(@CurrentUser("sub") userId: string) {
         return this.cartService.getMyCart(userId);
+    }
+
+    @Delete("items/:productId")
+    @ApiOperation({
+        summary: "Remove item from cart",
+        description:
+            "Removes a specific product from the authenticated user's cart.",
+    })
+    @ApiParam({
+        name: "productId",
+        description: "ID of the product to remove from the cart",
+        required: true,
+    })
+    async removeItemFromCart(
+        @CurrentUser("sub") userId: string,
+        @Param("productId") productId: string
+    ) {
+        return this.cartService.removeItemFromCart(userId, productId);
     }
 
     @Delete()

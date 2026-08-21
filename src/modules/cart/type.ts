@@ -5,6 +5,7 @@ export type CartType = Prisma.CartGetPayload<{
         id: true;
         cartItems: {
             select: {
+                id: true;
                 quantity: true;
                 product: {
                     select: {

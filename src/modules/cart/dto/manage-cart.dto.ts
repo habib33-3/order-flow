@@ -2,12 +2,14 @@ import { ApiProperty } from "@nestjs/swagger";
 
 import { Type } from "class-transformer";
 import {
+    ArrayMaxSize,
     ArrayMinSize,
     IsArray,
     IsInt,
     IsNotEmpty,
     IsPositive,
     IsString,
+    Max,
     ValidateNested,
 } from "class-validator";
 
@@ -24,8 +26,10 @@ class CartItemDto {
         description: "Quantity of the product",
         example: 2,
         minimum: 1,
+        maximum: 100,
     })
     @IsInt()
+    @Max(100)
     @IsPositive()
     quantity: number;
 }
@@ -47,6 +51,7 @@ export class ManageCartDto {
     })
     @IsArray()
     @ArrayMinSize(1)
+    @ArrayMaxSize(100)
     @ValidateNested({ each: true })
     @Type(() => CartItemDto)
     items: CartItemDto[];

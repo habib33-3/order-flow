@@ -7,6 +7,7 @@ import {
 import { PrismaService } from "src/common/prisma/prisma.service";
 import { cartCacheKeyWithUserId } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
+import { Prisma } from "src/generated/prisma/client";
 
 import { ProductsService } from "../products/products.service";
 import { AddItemToCartDto } from "./dto/add-item-to-cart.dto";
@@ -40,26 +41,23 @@ export class CartService {
             update: {},
         });
 
-        const existingItem = await this.prisma.cartItem.findUnique({
-            where: {
-                cartId_productId: {
+        try {
+            await this.prisma.cartItem.create({
+                data: {
                     cartId: cart.id,
                     productId: payload.productId,
+                    quantity: 1,
                 },
-            },
-        });
-
-        if (existingItem) {
-            throw new BadRequestException("Product is already in the cart");
+            });
+        } catch (error) {
+            if (
+                error instanceof Prisma.PrismaClientKnownRequestError &&
+                error.code === "P2002"
+            ) {
+                throw new BadRequestException("Product is already in the cart");
+            }
+            throw error;
         }
-
-        await this.prisma.cartItem.create({
-            data: {
-                cartId: cart.id,
-                productId: payload.productId,
-                quantity: 1,
-            },
-        });
 
         await this.redis.delete(cartCacheKeyWithUserId(userId));
 
@@ -87,7 +85,7 @@ export class CartService {
         });
 
         if (!cart) {
-            throw new NotFoundException("Cart not found");
+            return { id: null, cartItems: [] };
         }
 
         const cartItems = await this.prisma.cartItem.findMany({
@@ -138,6 +136,30 @@ export class CartService {
         };
     }
 
+    async removeItemFromCart(userId: string, productId: string) {
+        const cart = await this.getMyCart(userId);
+
+        const cartItem = cart.cartItems.find(
+            (item) => item.product.id === productId
+        );
+
+        if (!cartItem) {
+            throw new NotFoundException("Product not found in cart");
+        }
+
+        await this.prisma.cartItem.delete({
+            where: {
+                id: cartItem.id,
+            },
+        });
+
+        await this.redis.delete(cartCacheKeyWithUserId(userId));
+
+        return {
+            message: "Product removed from cart successfully",
+        };
+    }
+
     async getMyCart(userId: string) {
         const cacheKey = cartCacheKeyWithUserId(userId);
 
@@ -153,6 +175,7 @@ export class CartService {
                 id: true,
                 cartItems: {
                     select: {
+                        id: true,
                         quantity: true,
                         product: {
                             select: {
