@@ -34,6 +34,7 @@ model User {
   payments          Payment[]
   shippingAddresses ShippingAddress[]
   carts             Cart[]
+  couponRedeems     CouponRedeem[]
 
   @@index([role])
 }
@@ -115,7 +116,6 @@ model Category {
 model Cart {
   id String @id @default(cuid())
 
-
   userId    String
   cartItems CartItem[]
 
@@ -151,7 +151,6 @@ model OrderItem {
   unitPrice Decimal @db.Decimal(10, 2)
   subtotal  Decimal @db.Decimal(10, 2)
 
-
   order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
 
@@ -162,12 +161,12 @@ model OrderItem {
 }
 
 model Order {
-  id     String      @id @default(cuid())
-  userId String
-  total  Decimal     @db.Decimal(10, 2)
-  status OrderStatus @default(PENDING)
+  id              String      @id @default(cuid())
+  userId          String
+  total           Decimal     @db.Decimal(10, 2)
+  status          OrderStatus @default(PENDING)
   shippingAddress String
-  note    String?
+  note            String?
 
   user  User        @relation(fields: [userId], references: [id])
   items OrderItem[]
@@ -228,4 +227,56 @@ enum PaymentStatus {
 enum PaymentProvider {
   STRIPE
   BKASH
+}
+
+model Coupon {
+  id                    String       @id @default(cuid())
+  type                  CouponType
+  code                  String       @unique
+  discount              Decimal
+
+  startAt               DateTime
+  endAt                 DateTime
+
+ minimumOrderAmount Decimal?
+maximumDiscountAmount Decimal?
+
+  status                CouponStatus @default(INACTIVE)
+
+  maxLimit              Int          @default(1)
+  remainingLimit        Int          @default(1)
+
+  maxLimitPerUser       Int          @default(1)
+
+  createdAt             DateTime     @default(now())
+  updatedAt             DateTime     @updatedAt
+
+  couponRedeems         CouponRedeem[]
+}
+
+enum CouponStatus {
+  ACTIVE
+  INACTIVE
+  EXPIRED
+}
+
+enum CouponType {
+  PERCENTAGE
+  FIXED
+}
+
+model CouponRedeem {
+  id        String   @id @default(cuid())
+  userId    String
+  couponId  String
+
+  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([couponId])
+  @@index([userId])
+  @@index([couponId, userId])
 }
