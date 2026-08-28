@@ -7,6 +7,21 @@ import { env } from "src/common/env/env";
 
 import { QueueService } from "./queue.service";
 
+const bullBoardImports = env.SHOW_BULL_BOARD
+    ? [
+          BullBoardModule.forRoot({
+              route: "/queues",
+              adapter: ExpressAdapter,
+              boardOptions: {
+                  uiConfig: {
+                      boardTitle: `${env.APP_NAME} Queues`,
+                      hasHistoryUsage: true,
+                  },
+              },
+          }),
+      ]
+    : [];
+
 @Global()
 @Module({
     imports: [
@@ -15,8 +30,14 @@ import { QueueService } from "./queue.service";
                 url: env.REDIS_URL,
             },
             defaultJobOptions: {
-                removeOnComplete: true,
-                removeOnFail: true,
+                removeOnComplete: {
+                    age: 60 * 60,
+                    count: 1000,
+                },
+                removeOnFail: {
+                    age: 60 * 60 * 24,
+                    count: 1000,
+                },
                 attempts: 3,
                 backoff: {
                     type: "exponential",
@@ -24,10 +45,8 @@ import { QueueService } from "./queue.service";
                 },
             },
         }),
-        BullBoardModule.forRoot({
-            route: "/queues",
-            adapter: ExpressAdapter,
-        }),
+
+        ...bullBoardImports,
     ],
     providers: [QueueService],
     exports: [QueueService],
