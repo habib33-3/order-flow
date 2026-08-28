@@ -13,6 +13,7 @@ import {
 
 import { BkashStrategy } from "./bkash/strategy/bkash.strategy";
 import { PaymentDto } from "./dto/payment.dto";
+import { PaymentQueueService } from "./job/payment.queue.service";
 import { StripeStrategy } from "./stripe/strategy/stripe.strategy";
 
 @Injectable()
@@ -20,7 +21,8 @@ export class PaymentService {
     constructor(
         private readonly stripe: StripeStrategy,
         private readonly bkash: BkashStrategy,
-        private readonly prisma: PrismaService
+        private readonly prisma: PrismaService,
+        private readonly paymentQueue: PaymentQueueService
     ) {}
 
     private getStrategy(provider: PaymentProvider) {
@@ -83,6 +85,11 @@ export class PaymentService {
                 },
             });
         }
+
+        await this.paymentQueue.enqueuePaymentExpiration(
+            payment.id,
+            payment.orderId
+        );
 
         return result;
     }
@@ -186,6 +193,7 @@ export class PaymentService {
         });
     }
 
+    // handle stripe webhook
     async handlePaymentExpired(payload: { paymentId: string }) {
         return this.prisma.$transaction(async (tx) => {
             const payment = await tx.payment.findUnique({
@@ -229,6 +237,59 @@ export class PaymentService {
             });
 
             return updatedPayment;
+        });
+    }
+
+    // handles bullmq job
+    async expirePayment(paymentId: string, orderId: string) {
+        return this.prisma.$transaction(async (tx) => {
+            const paymentResult = await tx.payment.updateMany({
+                where: {
+                    id: paymentId,
+                    status: PaymentStatus.PENDING,
+                    expiresAt: {
+                        lte: new Date(),
+                    },
+                },
+                data: {
+                    status: PaymentStatus.EXPIRED,
+                },
+            });
+
+            // Payment was already paid/expired/etc.
+            if (paymentResult.count === 0) {
+                return false;
+            }
+
+            const activePayment = await tx.payment.findFirst({
+                where: {
+                    orderId,
+                    status: {
+                        in: [PaymentStatus.PENDING, PaymentStatus.PAID],
+                    },
+                },
+                select: {
+                    id: true,
+                },
+            });
+
+            // Another payment is still active.
+            if (activePayment) {
+                return true;
+            }
+
+            await tx.order.updateMany({
+                where: {
+                    id: orderId,
+                    status: OrderStatus.PENDING,
+                },
+                data: {
+                    status: OrderStatus.CANCELED,
+                    canceledAt: new Date(),
+                },
+            });
+
+            return true;
         });
     }
 }

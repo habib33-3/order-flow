@@ -7,6 +7,7 @@ import { AppService } from "./app.service";
 import { EmailModule } from "./common/email/email.module";
 import { validateEnv } from "./common/env/env";
 import { PrismaModule } from "./common/prisma/prisma.module";
+import { QueueModule } from "./common/queue/queue.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { UploadFileModule } from "./common/upload-file/upload-file.module";
 import { CronJobModule } from "./jobs/cron-job.module";
@@ -43,6 +44,7 @@ import { UserModule } from "./modules/user/user.module";
         UploadFileModule,
         CategoryModule,
         CartModule,
+        QueueModule,
         CouponModule,
     ],
     controllers: [AppController],

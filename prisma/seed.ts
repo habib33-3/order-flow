@@ -1,388 +1,372 @@
-// /* eslint-disable no-console */
-// import { PrismaPg } from "@prisma/adapter-pg";
-// import * as argon2 from "argon2";
+/* eslint-disable no-console */
+import { PrismaPg } from "@prisma/adapter-pg";
+import * as argon2 from "argon2";
 
-// import { generateSku } from "../src/common/utils/generate-sku";
-// import { PrismaClient } from "../src/generated/prisma/client";
+import { generateSku } from "../src/common/utils/generate-sku";
+import { PrismaClient } from "../src/generated/prisma/client";
 
-// const databaseUrl = process.env.DATABASE_URL;
-// if (!databaseUrl) {
-//     throw new Error("DATABASE_URL environment variable is not set.");
-// }
+const databaseUrl = process.env.DATABASE_URL;
 
-// const prisma = new PrismaClient({
-//     adapter: new PrismaPg({
-//         connectionString: databaseUrl,
-//     }),
-// });
+if (!databaseUrl) {
+    throw new Error("DATABASE_URL environment variable is not set.");
+}
 
-// const generateStock = (min = 10, max = 100) => {
-//     return Math.floor(Math.random() * (max - min + 1)) + min;
-// };
+const prisma = new PrismaClient({
+    adapter: new PrismaPg({
+        connectionString: databaseUrl,
+    }),
+});
 
-// const cleanDatabase = async () => {
-//     console.log("🧹 Cleaning database...");
+const generateStock = (min = 10, max = 100) => {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+};
 
-//     // Delete in FK-safe order: children before parents.
-//     const deletedPayments = await prisma.payment.deleteMany();
-//     console.log(`✅ Deleted ${deletedPayments.count} payment(s).`);
+/**
+ * Clean database
+ *
+ * Delete child records before parent records because of FK constraints.
+ */
+const cleanDatabase = async () => {
+    console.log("🧹 Cleaning database...");
 
-//     const deletedOrderItems = await prisma.orderItem.deleteMany();
-//     console.log(`✅ Deleted ${deletedOrderItems.count} order item(s).`);
+    const deletedCartItems = await prisma.cartItem.deleteMany();
+    console.log(`✅ Deleted ${deletedCartItems.count} cart item(s).`);
 
-//     const deletedOrders = await prisma.order.deleteMany();
-//     console.log(`✅ Deleted ${deletedOrders.count} order(s).`);
+    const deletedCarts = await prisma.cart.deleteMany();
+    console.log(`✅ Deleted ${deletedCarts.count} cart(s).`);
 
-//     const deletedShippingAddresses = await prisma.shippingAddress.deleteMany();
-//     console.log(
-//         `✅ Deleted ${deletedShippingAddresses.count} shipping address(es).`
-//     );
+    const deletedPayments = await prisma.payment.deleteMany();
+    console.log(`✅ Deleted ${deletedPayments.count} payment(s).`);
 
-//     const deletedProducts = await prisma.product.deleteMany();
-//     console.log(`✅ Deleted ${deletedProducts.count} product(s).`);
+    const deletedOrderItems = await prisma.orderItem.deleteMany();
+    console.log(`✅ Deleted ${deletedOrderItems.count} order item(s).`);
 
-//     const deletedCategories = await prisma.category.deleteMany();
-//     console.log(`✅ Deleted ${deletedCategories.count} categories.`);
+    const deletedOrders = await prisma.order.deleteMany();
+    console.log(`✅ Deleted ${deletedOrders.count} order(s).`);
 
-//     const deletedUsers = await prisma.user.deleteMany();
-//     console.log(`✅ Deleted ${deletedUsers.count} user(s).`);
+    const deletedShippingAddresses = await prisma.shippingAddress.deleteMany();
 
-//     console.log("✅ Database cleaned successfully.");
-// };
+    console.log(
+        `✅ Deleted ${deletedShippingAddresses.count} shipping address(es).`
+    );
 
-// const seedAdmin = async (password: string) => {
-//     console.log("👤 Creating admin user...");
+    const deletedProducts = await prisma.product.deleteMany();
+    console.log(`✅ Deleted ${deletedProducts.count} product(s).`);
 
-//     const admin = await prisma.user.create({
-//         data: {
-//             name: "Admin",
-//             email: "admin@demo.com",
-//             password,
-//             role: "ADMIN",
-//             status: "ACTIVE",
-//         },
-//     });
+    const deletedCategories = await prisma.category.deleteMany();
+    console.log(`✅ Deleted ${deletedCategories.count} categories.`);
 
-//     console.log(`✅ Admin created successfully: ${admin.email}`);
-//     return admin;
-// };
+    const deletedUsers = await prisma.user.deleteMany();
+    console.log(`✅ Deleted ${deletedUsers.count} user(s).`);
 
-// const seedUser = async (password: string) => {
-//     console.log("👤 Creating regular user...");
+    console.log("✅ Database cleaned successfully.");
+};
 
-//     const user = await prisma.user.create({
-//         data: {
-//             name: "User",
-//             email: "user@demo.com",
-//             password,
-//             role: "USER",
-//             status: "ACTIVE",
-//         },
-//     });
+/**
+ * Seed admin
+ */
+const seedAdmin = async (password: string) => {
+    console.log("👤 Creating admin user...");
 
-//     console.log(`✅ User created successfully: ${user.email}`);
-//     return user;
-// };
+    const admin = await prisma.user.create({
+        data: {
+            name: "Admin",
+            email: "admin@demo.com",
+            password,
+            role: "ADMIN",
+            status: "ACTIVE",
+        },
+    });
 
-// const seedShippingAddresses = async (userId: string) => {
-//     console.log("📍 Creating shipping addresses...");
+    console.log(`✅ Admin created successfully: ${admin.email}`);
 
-//     const result = await prisma.shippingAddress.createMany({
-//         data: [
-//             {
-//                 userId,
-//                 title: "Hogwarts",
-//                 address: "Gryffindor Tower, Hogwarts Castle",
-//                 city: "Hogsmeade",
-//                 state: "Scottish Highlands",
-//                 postalCode: "HP001",
-//                 country: "Wizarding World",
-//             },
-//             {
-//                 userId,
-//                 title: "The Shire",
-//                 address: "Bag End, Bagshot Row",
-//                 city: "Hobbiton",
-//                 state: "Westfarthing",
-//                 postalCode: "LOTR001",
-//                 country: "Middle-earth",
-//             },
-//         ],
-//     });
+    return admin;
+};
 
-//     console.log(`✅ Created ${result.count} shipping address(es).`);
-// };
+/**
+ * Seed regular user
+ */
+const seedUser = async (password: string) => {
+    console.log("👤 Creating regular user...");
 
-// const seedCategories = async () => {
-//     console.log("🗂️ Creating categories...");
+    const user = await prisma.user.create({
+        data: {
+            name: "User",
+            email: "user@demo.com",
+            password,
+            role: "USER",
+            status: "ACTIVE",
+        },
+    });
 
-//     const logo = "https://picsum.photos/100/100";
-//     const categories = [
-//         {
-//             name: "Electronics",
-//             description: "Electronic gadgets and devices",
-//             logo,
-//         },
-//         { name: "Books", description: "Physical and digital books", logo },
-//     ];
+    console.log(`✅ User created successfully: ${user.email}`);
 
-//     const result = await prisma.category.createMany({
-//         data: categories,
-//     });
-//     console.log(`✅ Created ${result.count} categories.`);
+    return user;
+};
 
-//     return prisma.category.findMany({
-//         orderBy: { createdAt: "asc" },
-//     });
-// };
+/**
+ * Seed shipping addresses
+ */
+const seedShippingAddresses = async (userId: string) => {
+    console.log("📍 Creating shipping addresses...");
 
-// const seedProducts = async (categoryId: string) => {
-//     console.log("🛒 Creating products...");
+    const result = await prisma.shippingAddress.createMany({
+        data: [
+            {
+                userId,
+                title: "Hogwarts",
+                address: "Gryffindor Tower, Hogwarts Castle",
+                city: "Hogsmeade",
+                state: "Scottish Highlands",
+                postalCode: "HP001",
+                country: "Wizarding World",
+            },
+            {
+                userId,
+                title: "The Shire",
+                address: "Bag End, Bagshot Row",
+                city: "Hobbiton",
+                state: "Westfarthing",
+                postalCode: "LOTR001",
+                country: "Middle-earth",
+            },
+        ],
+    });
 
-//     const thumbnail = "https://picsum.photos/200/300";
-//     const images = [
-//         "https://picsum.photos/200/300",
-//         "https://picsum.photos/200/300",
-//         "https://picsum.photos/200/300",
-//     ];
+    console.log(`✅ Created ${result.count} shipping address(es).`);
+};
 
-//     const products = [
-//         {
-//             name: "Product 1",
-//             description: "Description 1",
-//             price: 10,
-//             sku: generateSku(),
-//             stock: generateStock(),
-//             thumbnail,
-//             images,
-//             categoryId,
-//             status: "ACTIVE" as const,
-//         },
-//         {
-//             name: "Product 2",
-//             description: "Description 2",
-//             price: 20,
-//             sku: generateSku(),
-//             stock: generateStock(),
-//             thumbnail,
-//             images,
-//             categoryId,
-//             status: "ACTIVE" as const,
-//         },
-//         {
-//             name: "Product 3",
-//             description: "Description 3",
-//             price: 30,
-//             sku: generateSku(),
-//             stock: generateStock(),
-//             thumbnail,
-//             images,
-//             categoryId,
-//             status: "ACTIVE" as const,
-//         },
-//     ];
+/**
+ * Seed categories
+ */
+const seedCategories = async () => {
+    console.log("🗂️ Creating categories...");
 
-//     const result = await prisma.product.createMany({
-//         data: products,
-//     });
-//     console.log(`✅ Created ${result.count} product(s).`);
+    const logo = "https://picsum.photos/100/100";
 
-//     return prisma.product.findMany({
-//         orderBy: {
-//             createdAt: "asc",
-//         },
-//     });
-// };
+    const categories = [
+        {
+            name: "Electronics",
+            description: "Electronic gadgets and devices",
+            logo,
+        },
+        {
+            name: "Books",
+            description: "Physical and digital books",
+            logo,
+        },
+    ];
 
-// const seedOrders = async (
-//     userId: string,
-//     products: Awaited<ReturnType<typeof seedProducts>>
-// ) => {
-//     console.log("📦 Creating orders...");
+    const result = await prisma.category.createMany({
+        data: categories,
+    });
 
-//     if (products.length < 3) {
-//         throw new Error("At least 3 products are required to seed orders.");
-//     }
+    console.log(`✅ Created ${result.count} categories.`);
 
-//     const product1 = products[0];
-//     const product2 = products[1];
-//     const product3 = products[2];
+    return prisma.category.findMany({
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
+};
 
-//     const order1Quantity1 = 2;
-//     const order1Quantity2 = 1;
-//     const order1Subtotal1 = Number(product1.price) * order1Quantity1;
-//     const order1Subtotal2 = Number(product2.price) * order1Quantity2;
-//     const order1Total = order1Subtotal1 + order1Subtotal2;
+/**
+ * Seed products
+ */
+const seedProducts = async (categoryId: string) => {
+    console.log("🛒 Creating products...");
 
-//     const order2Quantity = 3;
-//     const order2Subtotal = Number(product3.price) * order2Quantity;
-//     const order2Total = order2Subtotal;
+    const thumbnail = "https://picsum.photos/200/300";
 
-//     const result = await prisma.$transaction(async (tx) => {
-//         // Reduce stock for the products used in orders.
-//         await tx.product.update({
-//             where: { id: product1.id },
-//             data: { stock: { decrement: order1Quantity1 } },
-//         });
-//         await tx.product.update({
-//             where: { id: product2.id },
-//             data: { stock: { decrement: order1Quantity2 } },
-//         });
-//         await tx.product.update({
-//             where: { id: product3.id },
-//             data: { stock: { decrement: order2Quantity } },
-//         });
+    const images = [
+        "https://picsum.photos/200/300",
+        "https://picsum.photos/200/301",
+        "https://picsum.photos/200/302",
+    ];
 
-//         const order1 = await tx.order.create({
-//             data: {
-//                 userId,
-//                 total: order1Total,
-//                 status: "CONFIRMED",
-//                 paidAt: new Date(),
-//                 items: {
-//                     create: [
-//                         {
-//                             productId: product1.id,
-//                             quantity: order1Quantity1,
-//                             unitPrice: product1.price,
-//                             subtotal: order1Subtotal1,
-//                         },
-//                         {
-//                             productId: product2.id,
-//                             quantity: order1Quantity2,
-//                             unitPrice: product2.price,
-//                             subtotal: order1Subtotal2,
-//                         },
-//                     ],
-//                 },
-//             },
-//             include: { items: true },
-//         });
+    const products = [
+        {
+            name: "Product 1",
+            description: "Description 1",
+            price: 10,
+            sku: generateSku(),
+            stock: generateStock(),
+            thumbnail,
+            images,
+            categoryId,
+            status: "ACTIVE" as const,
+        },
+        {
+            name: "Product 2",
+            description: "Description 2",
+            price: 20,
+            sku: generateSku(),
+            stock: generateStock(),
+            thumbnail,
+            images,
+            categoryId,
+            status: "ACTIVE" as const,
+        },
+        {
+            name: "Product 3",
+            description: "Description 3",
+            price: 30,
+            sku: generateSku(),
+            stock: generateStock(),
+            thumbnail,
+            images,
+            categoryId,
+            status: "ACTIVE" as const,
+        },
+    ];
 
-//         const order2 = await tx.order.create({
-//             data: {
-//                 userId,
-//                 total: order2Total,
-//                 status: "PENDING",
-//                 items: {
-//                     create: [
-//                         {
-//                             productId: product3.id,
-//                             quantity: order2Quantity,
-//                             unitPrice: product3.price,
-//                             subtotal: order2Subtotal,
-//                         },
-//                     ],
-//                 },
-//             },
-//             include: { items: true },
-//         });
+    const result = await prisma.product.createMany({
+        data: products,
+    });
 
-//         return { order1, order2 };
-//     });
+    console.log(`✅ Created ${result.count} product(s).`);
 
-//     console.log(
-//         `✅ Created order ${result.order1.id} with ${result.order1.items.length} item(s).`
-//     );
-//     console.log(
-//         `✅ Created order ${result.order2.id} with ${result.order2.items.length} item(s).`
-//     );
-//     console.log("✅ Orders seeded successfully.");
+    return prisma.product.findMany({
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
+};
 
-//     return result;
-// };
+/**
+ * Seed cart
+ */
+const seedCart = async (
+    userId: string,
+    products: Awaited<ReturnType<typeof seedProducts>>
+) => {
+    console.log("🛍️ Creating cart...");
 
-// const seedPayments = async (
-//     userId: string,
-//     orders: Awaited<ReturnType<typeof seedOrders>>
-// ) => {
-//     console.log("💳 Creating payments...");
+    if (products.length < 3) {
+        throw new Error("At least 3 products are required to seed cart.");
+    }
 
-//     const { order1, order2 } = orders;
+    const product1 = products[0];
+    const product2 = products[1];
+    const product3 = products[2];
 
-//     const result = await prisma.$transaction(async (tx) => {
-//         // order1 is PAID -> a completed Stripe payment.
-//         const payment1 = await tx.payment.create({
-//             data: {
-//                 orderId: order1.id,
-//                 userId,
-//                 amount: order1.total,
-//                 status: "PAID",
-//                 provider: "STRIPE",
-//                 currency: "USD",
-//                 idempotencyKey: `seed-${order1.id}`,
-//                 transactionId: `pi_seed_${order1.id}`,
-//             },
-//         });
+    const cart = await prisma.cart.create({
+        data: {
+            userId,
+            cartItems: {
+                create: [
+                    {
+                        productId: product1.id,
+                        quantity: 2,
+                    },
+                    {
+                        productId: product2.id,
+                        quantity: 1,
+                    },
+                    {
+                        productId: product3.id,
+                        quantity: 3,
+                    },
+                ],
+            },
+        },
+        include: {
+            cartItems: true,
+        },
+    });
 
-//         // order2 is PENDING -> an initiated bKash payment awaiting completion.
-//         const payment2 = await tx.payment.create({
-//             data: {
-//                 orderId: order2.id,
-//                 userId,
-//                 amount: order2.total,
-//                 status: "PENDING",
-//                 provider: "BKASH",
-//                 currency: "USD",
-//                 idempotencyKey: `seed-${order2.id}`,
-//                 expiresAt: new Date(Date.now() + 30 * 60 * 1000), // 30 minutes from now
-//             },
-//         });
+    console.log(
+        `✅ Created cart ${cart.id} with ${cart.cartItems.length} item(s).`
+    );
 
-//         return { payment1, payment2 };
-//     });
+    return cart;
+};
 
-//     console.log(`✅ Created payment ${result.payment1.id} (PAID, STRIPE).`);
-//     console.log(`✅ Created payment ${result.payment2.id} (PENDING, BKASH).`);
-//     console.log("✅ Payments seeded successfully.");
+const main = async () => {
+    console.log("🌱 Starting database seed...\n");
 
-//     return result;
-// };
+    const plainPassword = process.env.SEED_PASSWORD ?? "123456";
 
-// const main = async () => {
-//     console.log("🌱 Starting database seed...\n");
+    console.log("🔐 Hashing seed password...");
 
-//     const plainPassword = process.env.SEED_PASSWORD ?? "123456";
-//     console.log("🔐 Hashing seed password...");
-//     const hashedPassword = await argon2.hash(plainPassword);
-//     console.log("✅ Password hashed successfully.\n");
+    const hashedPassword = await argon2.hash(plainPassword);
 
-//     await cleanDatabase();
+    console.log("✅ Password hashed successfully.\n");
 
-//     console.log("\n👥 Seeding users...");
-//     const admin = await seedAdmin(hashedPassword);
-//     const user = await seedUser(hashedPassword);
+    // --------------------------------------------------
+    // Clean
+    // --------------------------------------------------
 
-//     console.log("\n📍 Seeding shipping addresses...");
-//     await seedShippingAddresses(user.id);
+    await cleanDatabase();
 
-//     console.log("\n🗂️ Seeding categories...");
-//     const categories = await seedCategories();
+    // --------------------------------------------------
+    // Users
+    // --------------------------------------------------
 
-//     console.log("\n🛒 Seeding products...");
-//     const products = await seedProducts(categories[0].id);
+    console.log("\n👥 Seeding users...");
 
-//     console.log("\n📦 Seeding orders...");
-//     const orders = await seedOrders(user.id, products);
+    const admin = await seedAdmin(hashedPassword);
+    const user = await seedUser(hashedPassword);
 
-//     console.log("\n💳 Seeding payments...");
-//     await seedPayments(user.id, orders);
+    // --------------------------------------------------
+    // Shipping addresses
+    // --------------------------------------------------
 
-//     console.log("\n🎉 Database seed completed successfully!");
-//     console.log("\n📋 Seed credentials:");
-//     console.log(`Admin: ${admin.email}`);
-//     console.log(`User: ${user.email}`);
-//     console.log(`Password: ${plainPassword}`);
-// };
+    console.log("\n📍 Seeding shipping addresses...");
 
-// main()
-//     .catch((error) => {
-//         console.error("\n❌ Database seed failed!");
-//         console.error(error);
-//         process.exitCode = 1;
-//     })
-//     .finally(async () => {
-//         console.log("\n🔌 Disconnecting from database...");
-//         await prisma.$disconnect();
-//         console.log("✅ Database disconnected.");
-//     });
+    await seedShippingAddresses(user.id);
+
+    // --------------------------------------------------
+    // Categories
+    // --------------------------------------------------
+
+    console.log("\n🗂️ Seeding categories...");
+
+    const categories = await seedCategories();
+
+    if (categories.length === 0) {
+        throw new Error("No categories were created.");
+    }
+
+    // --------------------------------------------------
+    // Products
+    // --------------------------------------------------
+
+    console.log("\n🛒 Seeding products...");
+
+    const products = await seedProducts(categories[0].id);
+
+    // --------------------------------------------------
+    // Cart
+    // --------------------------------------------------
+
+    console.log("\n🛍️ Seeding cart...");
+
+    await seedCart(user.id, products);
+
+    // --------------------------------------------------
+    // Done
+    // --------------------------------------------------
+
+    console.log("\n🎉 Database seed completed successfully!");
+
+    console.log("\n📋 Seed credentials:");
+    console.log(`Admin: ${admin.email}`);
+    console.log(`User: ${user.email}`);
+    console.log(`Password: ${plainPassword}`);
+};
+
+main()
+    .catch((error) => {
+        console.error("\n❌ Database seed failed!");
+        console.error(error);
+
+        process.exitCode = 1;
+    })
+    .finally(async () => {
+        console.log("\n🔌 Disconnecting from database...");
+
+        await prisma.$disconnect();
+
+        console.log("✅ Database disconnected.");
+    });
