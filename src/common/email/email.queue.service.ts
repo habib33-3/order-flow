@@ -13,7 +13,9 @@ export class EmailQueueService {
         private readonly emailQueue: Queue
     ) {}
 
-    async sendEmail(dto: SendEmailDto): Promise<void> {
-        await this.emailQueue.add("send-email", dto);
+    async sendEmail(dto: SendEmailDto, jobId: string): Promise<void> {
+        await this.emailQueue.add("send-email", dto, {
+            jobId,
+        });
     }
 }

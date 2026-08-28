@@ -13,21 +13,28 @@ export abstract class BaseProcessor extends WorkerHost {
 
     @OnWorkerEvent("completed")
     onCompleted(job: Job) {
-        this.logger.debug(`Job ${job.name} completed`);
+        this.logger.debug(
+            `Job completed | queue=${job.queueName} job=${job.id} name=${job.name} attempts=${job.attemptsMade}`
+        );
     }
 
     @OnWorkerEvent("failed")
     onFailed(job: Job, error: Error) {
-        this.logger.error(`Job ${job.name} failed`, error.stack);
+        this.logger.error(
+            `Job failed | queue=${job.queueName} job=${job.id} name=${job.name} attempts=${job.attemptsMade} error=${error.message}`,
+            error.stack
+        );
     }
 
     @OnWorkerEvent("active")
     onActive(job: Job) {
-        this.logger.log(`Job ${job.name} started`);
+        this.logger.debug(
+            `Job started | queue=${job.queueName} job=${job.id} name=${job.name} attempt=${job.attemptsMade + 1}`
+        );
     }
 
     @OnWorkerEvent("stalled")
     onStalled(jobId: string) {
-        this.logger.warn(`Job ${jobId} stalled`);
+        this.logger.warn(`Job stalled | job=${jobId}`);
     }
 }
