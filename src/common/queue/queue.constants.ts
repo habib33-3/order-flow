@@ -3,4 +3,4 @@ export const QUEUE_NAMES = {
     PAYMENT: "payment",
 } as const;
 
-export type QueueName = keyof typeof QUEUE_NAMES;
+export type QueueName = (typeof QUEUE_NAMES)[keyof typeof QUEUE_NAMES];

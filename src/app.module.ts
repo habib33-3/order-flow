@@ -44,7 +44,7 @@ import { UserModule } from "./modules/user/user.module";
         UploadFileModule,
         CategoryModule,
         CartModule,
-        QueueModule,
+        QueueModule.forRoot(),
         CouponModule,
     ],
     controllers: [AppController],
