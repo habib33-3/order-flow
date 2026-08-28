@@ -1,198 +1,198 @@
-// /* eslint-disable no-console */
-// import { PrismaPg } from "@prisma/adapter-pg";
-// import * as argon2 from "argon2";
+/* eslint-disable no-console */
+import { PrismaPg } from "@prisma/adapter-pg";
+import * as argon2 from "argon2";
 
-// import { generateSku } from "../src/common/utils/generate-sku";
-// import { PrismaClient } from "../src/generated/prisma/client";
+import { generateSku } from "../src/common/utils/generate-sku";
+import { PrismaClient } from "../src/generated/prisma/client";
 
-// const databaseUrl = process.env.DATABASE_URL;
-// if (!databaseUrl) {
-//     throw new Error("DATABASE_URL environment variable is not set.");
-// }
+const databaseUrl = process.env.DATABASE_URL;
+if (!databaseUrl) {
+    throw new Error("DATABASE_URL environment variable is not set.");
+}
 
-// const prisma = new PrismaClient({
-//     adapter: new PrismaPg({
-//         connectionString: databaseUrl,
-//     }),
-// });
+const prisma = new PrismaClient({
+    adapter: new PrismaPg({
+        connectionString: databaseUrl,
+    }),
+});
 
-// const generateStock = (min = 10, max = 100) => {
-//     return Math.floor(Math.random() * (max - min + 1)) + min;
-// };
+const generateStock = (min = 10, max = 100) => {
+    return Math.floor(Math.random() * (max - min + 1)) + min;
+};
 
-// const cleanDatabase = async () => {
-//     console.log("🧹 Cleaning database...");
+const cleanDatabase = async () => {
+    console.log("🧹 Cleaning database...");
 
-//     // Delete in FK-safe order: children before parents.
-//     const deletedPayments = await prisma.payment.deleteMany();
-//     console.log(`✅ Deleted ${deletedPayments.count} payment(s).`);
+    // Delete in FK-safe order: children before parents.
+    const deletedPayments = await prisma.payment.deleteMany();
+    console.log(`✅ Deleted ${deletedPayments.count} payment(s).`);
 
-//     const deletedOrderItems = await prisma.orderItem.deleteMany();
-//     console.log(`✅ Deleted ${deletedOrderItems.count} order item(s).`);
+    const deletedOrderItems = await prisma.orderItem.deleteMany();
+    console.log(`✅ Deleted ${deletedOrderItems.count} order item(s).`);
 
-//     const deletedOrders = await prisma.order.deleteMany();
-//     console.log(`✅ Deleted ${deletedOrders.count} order(s).`);
+    const deletedOrders = await prisma.order.deleteMany();
+    console.log(`✅ Deleted ${deletedOrders.count} order(s).`);
 
-//     const deletedShippingAddresses = await prisma.shippingAddress.deleteMany();
-//     console.log(
-//         `✅ Deleted ${deletedShippingAddresses.count} shipping address(es).`
-//     );
+    const deletedShippingAddresses = await prisma.shippingAddress.deleteMany();
+    console.log(
+        `✅ Deleted ${deletedShippingAddresses.count} shipping address(es).`
+    );
 
-//     const deletedProducts = await prisma.product.deleteMany();
-//     console.log(`✅ Deleted ${deletedProducts.count} product(s).`);
+    const deletedProducts = await prisma.product.deleteMany();
+    console.log(`✅ Deleted ${deletedProducts.count} product(s).`);
 
-//     const deletedCategories = await prisma.category.deleteMany();
-//     console.log(`✅ Deleted ${deletedCategories.count} categories.`);
+    const deletedCategories = await prisma.category.deleteMany();
+    console.log(`✅ Deleted ${deletedCategories.count} categories.`);
 
-//     const deletedUsers = await prisma.user.deleteMany();
-//     console.log(`✅ Deleted ${deletedUsers.count} user(s).`);
+    const deletedUsers = await prisma.user.deleteMany();
+    console.log(`✅ Deleted ${deletedUsers.count} user(s).`);
 
-//     console.log("✅ Database cleaned successfully.");
-// };
+    console.log("✅ Database cleaned successfully.");
+};
 
-// const seedAdmin = async (password: string) => {
-//     console.log("👤 Creating admin user...");
+const seedAdmin = async (password: string) => {
+    console.log("👤 Creating admin user...");
 
-//     const admin = await prisma.user.create({
-//         data: {
-//             name: "Admin",
-//             email: "admin@demo.com",
-//             password,
-//             role: "ADMIN",
-//             status: "ACTIVE",
-//         },
-//     });
+    const admin = await prisma.user.create({
+        data: {
+            name: "Admin",
+            email: "admin@demo.com",
+            password,
+            role: "ADMIN",
+            status: "ACTIVE",
+        },
+    });
 
-//     console.log(`✅ Admin created successfully: ${admin.email}`);
-//     return admin;
-// };
+    console.log(`✅ Admin created successfully: ${admin.email}`);
+    return admin;
+};
 
-// const seedUser = async (password: string) => {
-//     console.log("👤 Creating regular user...");
+const seedUser = async (password: string) => {
+    console.log("👤 Creating regular user...");
 
-//     const user = await prisma.user.create({
-//         data: {
-//             name: "User",
-//             email: "user@demo.com",
-//             password,
-//             role: "USER",
-//             status: "ACTIVE",
-//         },
-//     });
+    const user = await prisma.user.create({
+        data: {
+            name: "User",
+            email: "user@demo.com",
+            password,
+            role: "USER",
+            status: "ACTIVE",
+        },
+    });
 
-//     console.log(`✅ User created successfully: ${user.email}`);
-//     return user;
-// };
+    console.log(`✅ User created successfully: ${user.email}`);
+    return user;
+};
 
-// const seedShippingAddresses = async (userId: string) => {
-//     console.log("📍 Creating shipping addresses...");
+const seedShippingAddresses = async (userId: string) => {
+    console.log("📍 Creating shipping addresses...");
 
-//     const result = await prisma.shippingAddress.createMany({
-//         data: [
-//             {
-//                 userId,
-//                 title: "Hogwarts",
-//                 address: "Gryffindor Tower, Hogwarts Castle",
-//                 city: "Hogsmeade",
-//                 state: "Scottish Highlands",
-//                 postalCode: "HP001",
-//                 country: "Wizarding World",
-//             },
-//             {
-//                 userId,
-//                 title: "The Shire",
-//                 address: "Bag End, Bagshot Row",
-//                 city: "Hobbiton",
-//                 state: "Westfarthing",
-//                 postalCode: "LOTR001",
-//                 country: "Middle-earth",
-//             },
-//         ],
-//     });
+    const result = await prisma.shippingAddress.createMany({
+        data: [
+            {
+                userId,
+                title: "Hogwarts",
+                address: "Gryffindor Tower, Hogwarts Castle",
+                city: "Hogsmeade",
+                state: "Scottish Highlands",
+                postalCode: "HP001",
+                country: "Wizarding World",
+            },
+            {
+                userId,
+                title: "The Shire",
+                address: "Bag End, Bagshot Row",
+                city: "Hobbiton",
+                state: "Westfarthing",
+                postalCode: "LOTR001",
+                country: "Middle-earth",
+            },
+        ],
+    });
 
-//     console.log(`✅ Created ${result.count} shipping address(es).`);
-// };
+    console.log(`✅ Created ${result.count} shipping address(es).`);
+};
 
-// const seedCategories = async () => {
-//     console.log("🗂️ Creating categories...");
+const seedCategories = async () => {
+    console.log("🗂️ Creating categories...");
 
-//     const logo = "https://picsum.photos/100/100";
-//     const categories = [
-//         {
-//             name: "Electronics",
-//             description: "Electronic gadgets and devices",
-//             logo,
-//         },
-//         { name: "Books", description: "Physical and digital books", logo },
-//     ];
+    const logo = "https://picsum.photos/100/100";
+    const categories = [
+        {
+            name: "Electronics",
+            description: "Electronic gadgets and devices",
+            logo,
+        },
+        { name: "Books", description: "Physical and digital books", logo },
+    ];
 
-//     const result = await prisma.category.createMany({
-//         data: categories,
-//     });
-//     console.log(`✅ Created ${result.count} categories.`);
+    const result = await prisma.category.createMany({
+        data: categories,
+    });
+    console.log(`✅ Created ${result.count} categories.`);
 
-//     return prisma.category.findMany({
-//         orderBy: { createdAt: "asc" },
-//     });
-// };
+    return prisma.category.findMany({
+        orderBy: { createdAt: "asc" },
+    });
+};
 
-// const seedProducts = async (categoryId: string) => {
-//     console.log("🛒 Creating products...");
+const seedProducts = async (categoryId: string) => {
+    console.log("🛒 Creating products...");
 
-//     const thumbnail = "https://picsum.photos/200/300";
-//     const images = [
-//         "https://picsum.photos/200/300",
-//         "https://picsum.photos/200/300",
-//         "https://picsum.photos/200/300",
-//     ];
+    const thumbnail = "https://picsum.photos/200/300";
+    const images = [
+        "https://picsum.photos/200/300",
+        "https://picsum.photos/200/300",
+        "https://picsum.photos/200/300",
+    ];
 
-//     const products = [
-//         {
-//             name: "Product 1",
-//             description: "Description 1",
-//             price: 10,
-//             sku: generateSku(),
-//             stock: generateStock(),
-//             thumbnail,
-//             images,
-//             categoryId,
-//             status: "ACTIVE" as const,
-//         },
-//         {
-//             name: "Product 2",
-//             description: "Description 2",
-//             price: 20,
-//             sku: generateSku(),
-//             stock: generateStock(),
-//             thumbnail,
-//             images,
-//             categoryId,
-//             status: "ACTIVE" as const,
-//         },
-//         {
-//             name: "Product 3",
-//             description: "Description 3",
-//             price: 30,
-//             sku: generateSku(),
-//             stock: generateStock(),
-//             thumbnail,
-//             images,
-//             categoryId,
-//             status: "ACTIVE" as const,
-//         },
-//     ];
+    const products = [
+        {
+            name: "Product 1",
+            description: "Description 1",
+            price: 10,
+            sku: generateSku(),
+            stock: generateStock(),
+            thumbnail,
+            images,
+            categoryId,
+            status: "ACTIVE" as const,
+        },
+        {
+            name: "Product 2",
+            description: "Description 2",
+            price: 20,
+            sku: generateSku(),
+            stock: generateStock(),
+            thumbnail,
+            images,
+            categoryId,
+            status: "ACTIVE" as const,
+        },
+        {
+            name: "Product 3",
+            description: "Description 3",
+            price: 30,
+            sku: generateSku(),
+            stock: generateStock(),
+            thumbnail,
+            images,
+            categoryId,
+            status: "ACTIVE" as const,
+        },
+    ];
 
-//     const result = await prisma.product.createMany({
-//         data: products,
-//     });
-//     console.log(`✅ Created ${result.count} product(s).`);
+    const result = await prisma.product.createMany({
+        data: products,
+    });
+    console.log(`✅ Created ${result.count} product(s).`);
 
-//     return prisma.product.findMany({
-//         orderBy: {
-//             createdAt: "asc",
-//         },
-//     });
-// };
+    return prisma.product.findMany({
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
+};
 
 // const seedOrders = async (
 //     userId: string,
@@ -339,50 +339,51 @@
 //     return result;
 // };
 
-// const main = async () => {
-//     console.log("🌱 Starting database seed...\n");
+const main = async () => {
+    console.log("🌱 Starting database seed...\n");
 
-//     const plainPassword = process.env.SEED_PASSWORD ?? "123456";
-//     console.log("🔐 Hashing seed password...");
-//     const hashedPassword = await argon2.hash(plainPassword);
-//     console.log("✅ Password hashed successfully.\n");
+    const plainPassword = process.env.SEED_PASSWORD ?? "123456";
+    console.log("🔐 Hashing seed password...");
+    const hashedPassword = await argon2.hash(plainPassword);
+    console.log("✅ Password hashed successfully.\n");
 
-//     await cleanDatabase();
+    await cleanDatabase();
 
-//     console.log("\n👥 Seeding users...");
-//     const admin = await seedAdmin(hashedPassword);
-//     const user = await seedUser(hashedPassword);
+    console.log("\n👥 Seeding users...");
+    const admin = await seedAdmin(hashedPassword);
+    const user = await seedUser(hashedPassword);
 
-//     console.log("\n📍 Seeding shipping addresses...");
-//     await seedShippingAddresses(user.id);
+    console.log("\n📍 Seeding shipping addresses...");
+    await seedShippingAddresses(user.id);
 
-//     console.log("\n🗂️ Seeding categories...");
-//     const categories = await seedCategories();
+    console.log("\n🗂️ Seeding categories...");
+    const categories = await seedCategories();
 
-//     console.log("\n🛒 Seeding products...");
-//     const products = await seedProducts(categories[0].id);
+    console.log("\n🛒 Seeding products...");
+    // const products = await seedProducts(categories[0].id);
+    await seedProducts(categories[0].id);
 
-//     console.log("\n📦 Seeding orders...");
-//     const orders = await seedOrders(user.id, products);
+    // console.log("\n📦 Seeding orders...");
+    // const orders = await seedOrders(user.id, products);
 
-//     console.log("\n💳 Seeding payments...");
-//     await seedPayments(user.id, orders);
+    // console.log("\n💳 Seeding payments...");
+    // await seedPayments(user.id, orders);
 
-//     console.log("\n🎉 Database seed completed successfully!");
-//     console.log("\n📋 Seed credentials:");
-//     console.log(`Admin: ${admin.email}`);
-//     console.log(`User: ${user.email}`);
-//     console.log(`Password: ${plainPassword}`);
-// };
+    console.log("\n🎉 Database seed completed successfully!");
+    console.log("\n📋 Seed credentials:");
+    console.log(`Admin: ${admin.email}`);
+    console.log(`User: ${user.email}`);
+    console.log(`Password: ${plainPassword}`);
+};
 
-// main()
-//     .catch((error) => {
-//         console.error("\n❌ Database seed failed!");
-//         console.error(error);
-//         process.exitCode = 1;
-//     })
-//     .finally(async () => {
-//         console.log("\n🔌 Disconnecting from database...");
-//         await prisma.$disconnect();
-//         console.log("✅ Database disconnected.");
-//     });
+main()
+    .catch((error) => {
+        console.error("\n❌ Database seed failed!");
+        console.error(error);
+        process.exitCode = 1;
+    })
+    .finally(async () => {
+        console.log("\n🔌 Disconnecting from database...");
+        await prisma.$disconnect();
+        console.log("✅ Database disconnected.");
+    });
