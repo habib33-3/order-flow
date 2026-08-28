@@ -1,9 +1,10 @@
 import { BullModule } from "@nestjs/bullmq";
 import { Global, Module } from "@nestjs/common";
 
+import { ExpressAdapter } from "@bull-board/express";
+import { BullBoardModule } from "@bull-board/nestjs";
 import { env } from "src/common/env/env";
 
-import { BaseProcessor } from "./base.processor.service";
 import { QueueService } from "./queue.service";
 
 @Global()
@@ -22,6 +23,10 @@ import { QueueService } from "./queue.service";
                     delay: 5000,
                 },
             },
+        }),
+        BullBoardModule.forRoot({
+            route: "/queues",
+            adapter: ExpressAdapter,
         }),
     ],
     providers: [QueueService],

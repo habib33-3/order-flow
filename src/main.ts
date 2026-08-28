@@ -16,7 +16,7 @@ async function bootstrap() {
     app.enableShutdownHooks();
 
     app.setGlobalPrefix("api/v1", {
-        exclude: ["/"],
+        exclude: ["/", "/queues", "/queues/{*path}"],
     });
 
     app.use(helmet());
