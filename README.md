@@ -1,270 +1,349 @@
-<div align="center">
-
 # Order Flow
 
-**A production-ready e-commerce backend built with NestJS, TypeScript, PostgreSQL, and Prisma.**
+**Order Flow** is a production-oriented e-commerce backend API built with **NestJS, TypeScript, PostgreSQL, Prisma, Redis, and BullMQ**.
 
-Secure JWT auth, dual payment gateways (Stripe + bKash), Redis caching, background jobs, and a fully automated Docker + GitHub Actions CI/CD pipeline — built to demonstrate real-world backend architecture, not tutorial code.
+It demonstrates a scalable backend architecture with secure authentication, inventory-aware order processing, multiple payment providers, asynchronous background jobs, caching, transactional email, and containerized deployment.
 
-[![NestJS](https://img.shields.io/badge/NestJS-11-E0234E?logo=nestjs&logoColor=white)](https://nestjs.com/)
-[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript&logoColor=white)](https://www.typescriptlang.org/)
-[![PostgreSQL](https://img.shields.io/badge/PostgreSQL-17-4169E1?logo=postgresql&logoColor=white)](https://www.postgresql.org/)
-[![Prisma](https://img.shields.io/badge/Prisma-ORM-2D3748?logo=prisma&logoColor=white)](https://www.prisma.io/)
-[![Redis](https://img.shields.io/badge/Redis-Cache-DC382D?logo=redis&logoColor=white)](https://redis.io/)
-[![Docker](https://img.shields.io/badge/Docker-Compose-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](#license)
-
-[**Live API**](https://order-flow-ek0j.onrender.com) · [**Swagger Docs**](https://order-flow-ek0j.onrender.com/api/docs) · [**Report Issue**](https://github.com/habib33-3/order-flow/issues)
-
-</div>
+<p align="center">
+  <a href="https://order-flow-ek0j.onrender.com">Live API</a> •
+  <a href="https://order-flow-ek0j.onrender.com/api/docs">Swagger Docs</a> •
+  <a href="https://github.com/habib33-3/order-flow/issues">Report an Issue</a>
+</p>
 
 ---
 
 ## Highlights
 
-|                    |                                                                                              |
-| ------------------ | -------------------------------------------------------------------------------------------- |
-| 🔐 **Auth**        | JWT access/refresh rotation, Argon2 hashing, email OTP, role-based access (`ADMIN`, `USER`)  |
-| 💳 **Payments**    | Stripe + bKash behind a shared abstraction — Strategy Pattern for provider-agnostic checkout |
-| ⚡ **Performance** | Redis-backed caching and refresh-token storage, cursor-based pagination for orders           |
-| 🐳 **Infra**       | Fully Dockerized dev environment, GitHub Actions CI/CD with automated Prisma migrations      |
-| 📄 **Docs**        | Complete Swagger/OpenAPI spec, Zod-validated environment config                              |
+- **Authentication & Authorization** — JWT access/refresh tokens, refresh-token rotation, Argon2 password hashing, email OTP verification, password reset, and role-based access control.
+- **Catalog & Inventory** — Product/category management, Cloudinary image uploads, stock tracking, and inventory validation.
+- **Cart & Orders** — Redis-backed cart caching, transactional order creation, stock checks, inventory reservation, cancellation, and cursor pagination.
+- **Payments** — Stripe Checkout and bKash Tokenized Checkout through a shared payment abstraction with idempotent processing and webhook/callback handling.
+- **Background Processing** — BullMQ workers for transactional email and payment expiry/recovery with retries, exponential backoff, and delayed jobs.
+- **Production Infrastructure** — PostgreSQL as the source of truth, Redis for caching and queues, Docker Compose for local infrastructure, and centralized application configuration/validation.
 
 ---
 
 ## Architecture
 
-Modular NestJS application with PostgreSQL as the system of record and Redis for caching and short-lived state. External services (Stripe, bKash, Cloudinary, Resend) are isolated behind dedicated modules so no domain logic depends on a specific provider.
-
-```
-                              Client
-                                 │
-                                 ▼
-                       REST API (NestJS)
-                                 │
-      ┌───────────────┬─────────┴─────────┬───────────────┐
-      ▼                ▼                   ▼               ▼
- Authentication   Products & Orders   Payment Module    User Module
-      │                │                   │               │
-      └────────────────┴─────────┬─────────┴───────────────┘
-                                  ▼
-                             Prisma ORM
-                                  │
-                                  ▼
-                             PostgreSQL
-                                  │
-                       ┌──────────┴──────────┐
-                       │      Redis Cache     │
-                       │  refresh tokens ·    │
-                       │  API response cache · │
-                       │  short-lived state    │
-                       └──────────┬──────────┘
-      ┌───────────────┬───────────┼───────────────┐
-      ▼                ▼          ▼               ▼
- Cloudinary         Stripe       bKash          Resend
- (images)         (payments)  (payments)      (email)
+```text
+                         Client
+                           |
+                           v
+                  NestJS REST API
+                     /api/v1
+                           |
+        +------------------+------------------+
+        |                  |                  |
+        v                  v                  v
+     Prisma             Redis            Providers
+        |                  |            /     |      \
+        v                  |         Stripe  bKash  Cloudinary
+   PostgreSQL              |
+                           +---- Cart Cache
+                           +---- Refresh Tokens
+                           +---- BullMQ
+                                  |
+                         +--------+--------+
+                         |                 |
+                    Email Worker    Payment Worker
+                         |                 |
+                       Resend       Payment Recovery
 ```
 
-**Cache-aside pattern:** every read checks Redis first; on a miss, the service queries PostgreSQL, populates the cache, then returns the response — keeping hot paths fast without sacrificing consistency.
+PostgreSQL remains the authoritative data store for users, products, carts, orders, addresses, and payments.
 
-```
-Request → Cache hit? ──Yes──→ Return Redis data
-              │
-              No
-              ▼
-        Query PostgreSQL → Store in Redis → Return response
-```
+Redis is used for cart caching, refresh-token storage, and BullMQ queue state. Cart operations use a cache-aside strategy with explicit invalidation after mutations, while stock is validated again during order creation to maintain database-level correctness.
+
+Provider-specific integrations are isolated behind dedicated modules, keeping payment concerns separate from core order processing.
 
 ---
 
 ## Tech Stack
 
-| Layer               | Technologies                           |
-| ------------------- | -------------------------------------- |
-| **Backend**         | NestJS 11, TypeScript 5, Node.js 24    |
-| **Database**        | PostgreSQL 17, Prisma ORM              |
-| **Auth**            | Passport JWT, Argon2                   |
-| **Cache**           | Redis, ioredis                         |
-| **Payments**        | Stripe, bKash (Tokenized Checkout)     |
-| **Storage / Email** | Cloudinary, Resend, Handlebars         |
-| **Validation**      | class-validator, Zod                   |
-| **Infra**           | Docker, Docker Compose, GitHub Actions |
-| **Package Manager** | pnpm                                   |
+| Area            | Technology                        |
+| --------------- | --------------------------------- |
+| Framework       | NestJS 11                         |
+| Language        | TypeScript 5                      |
+| Runtime         | Node.js 24                        |
+| Database        | PostgreSQL 17                     |
+| ORM             | Prisma 7 + `@prisma/adapter-pg`   |
+| Cache           | Redis + ioredis                   |
+| Background Jobs | BullMQ 6                          |
+| Authentication  | Passport JWT + Argon2             |
+| Payments        | Stripe + bKash Tokenized Checkout |
+| Image Storage   | Cloudinary                        |
+| Email           | Resend + Handlebars               |
+| Validation      | class-validator + Zod             |
+| Infrastructure  | Docker + Docker Compose           |
+| Package Manager | pnpm 11                           |
 
 ---
 
-## Feature Overview
+## API
 
-**Authentication & Authorization** — JWT access/refresh tokens, email OTP verification, password reset flow, role-based guards, Argon2 password hashing.
+The REST API is available under:
 
-**Product Management** — Category CRUD, product CRUD, Cloudinary image uploads, inventory/stock tracking, product status lifecycle.
+```text
+/api/v1
+```
 
-**Order Management** — Order creation and cancellation, cursor-based pagination, shipping address management.
+Interactive API documentation is available through Swagger:
 
-**Payments** — Stripe Checkout, bKash Tokenized Checkout, unified webhook/callback handling, automatic payment expiration via scheduled jobs.
+```text
+/api/docs
+```
 
-**Infrastructure** — Redis caching, cron-driven background jobs, Swagger documentation, Docker & Docker Compose, GitHub Actions CI/CD.
+### Main API Areas
+
+| Area                | Examples                                                                     |
+| ------------------- | ---------------------------------------------------------------------------- |
+| Authentication      | `/auth/register`, `/auth/login`, `/auth/refresh`, `/auth/logout`, `/auth/me` |
+| Password Management | `/password/change`, `/password/forgot`, `/password/reset`                    |
+| Products            | `/products`, `/products/:id`, `/products/:id/images`                         |
+| Categories          | `/category`, `/category/:id`                                                 |
+| Cart                | `/cart`, `/cart/add-item`, `/cart/manage`                                    |
+| Orders              | `/orders`, `/orders/me`, `/orders/:id`, `/orders/:id/cancel`                 |
+| Shipping            | `/shipping-address`, `/shipping-address/:id`                                 |
+| User Profile        | `/user/me`, `/user/me/avatar`                                                |
+| Payments            | `/payments/stripe/webhook`, `/payments/bkash/callback`                       |
+
+Most protected endpoints require a bearer access token. Role-based authorization is applied to administrative operations where required.
+
+See the Swagger documentation for complete request, response, query, and authentication details.
 
 ---
 
-## Key Engineering Decisions
+## Background Processing
 
-- **Strategy Pattern for payments** — Stripe and bKash implement a common interface, so adding a new provider doesn't touch order or checkout logic.
-- **Redis for both cache and session state** — refresh tokens and hot API responses share one cache layer, reducing infrastructure surface area.
-- **Zod-validated environment config** — the app fails fast at boot if required env vars are missing or malformed, instead of surfacing errors at runtime.
-- **Centralized exception handling** — consistent error shape across every module via a global filter.
-- **Automated migrations in CI** — `prisma migrate deploy` runs against Neon Postgres as part of the GitHub Actions pipeline, not manually.
+Order Flow uses **BullMQ + Redis** for asynchronous and delayed workloads.
+
+Current background jobs include:
+
+- Transactional email delivery through Resend
+- Five-minute delayed payment expiry
+- Scheduled payment recovery every five minutes
+- Automatic retries with exponential backoff
+- Job retention and cleanup policies
+- Optional Bull Board monitoring
+
+The queue dashboard can be enabled with:
+
+```env
+SHOW_BULL_BOARD=true
+```
+
+and accessed at:
+
+```text
+/queues
+```
 
 ---
 
-## Technical Challenges Solved
+## Getting Started
 
-- JWT authentication with refresh token rotation and Redis-backed revocation
-- A common abstraction supporting multiple payment providers with different callback shapes
-- Idempotent handling of asynchronous payment webhooks
-- Automated, zero-touch production database migrations
-- A fully containerized local dev environment matching production topology
+### Requirements
+
+- Node.js 24+
+- pnpm 11+
+- PostgreSQL 17+
+- Redis 7+
+- Stripe credentials
+- bKash credentials
+- Resend credentials
+- Cloudinary credentials
+
+Docker Desktop can be used instead of installing PostgreSQL and Redis locally.
+
+### Installation
+
+```bash
+git clone https://github.com/habib33-3/order-flow.git
+cd order-flow
+
+pnpm install
+```
+
+Create the environment file:
+
+```bash
+cp .env.example .env
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env
+```
+
+Configure the required environment variables, then apply the database migrations:
+
+```bash
+pnpm prisma migrate dev
+```
+
+Optionally seed the database:
+
+```bash
+pnpm prisma db seed
+```
+
+Start the development server:
+
+```bash
+pnpm start:dev
+```
+
+The API will be available at:
+
+```text
+http://localhost:5000
+```
+
+Swagger:
+
+```text
+http://localhost:5000/api/docs
+```
+
+---
+
+## Docker
+
+The included Compose configuration runs:
+
+- NestJS API
+- PostgreSQL
+- Redis
+
+Create the Docker environment file:
+
+```bash
+cp .env.example .env.docker
+```
+
+On Windows PowerShell:
+
+```powershell
+Copy-Item .env.example .env.docker
+```
+
+Use Docker service names for internal connections:
+
+```env
+DATABASE_URL=postgresql://user:password@db:5432/order-flow
+REDIS_URL=redis://redis:6379
+SERVER_URL=http://localhost:5000
+```
+
+Start the stack:
+
+```bash
+docker compose up --build
+```
+
+Apply migrations:
+
+```bash
+docker compose exec app pnpm prisma migrate deploy
+```
+
+Optionally seed the database:
+
+```bash
+docker compose exec app pnpm prisma db seed
+```
+
+Stop the stack:
+
+```bash
+docker compose down
+```
+
+Use `docker compose down -v` only when you intentionally want to remove the persisted database and Redis volumes.
+
+---
+
+## Environment Configuration
+
+`.env.example` documents the complete configuration required by the application.
+
+Core configuration includes:
+
+```text
+DATABASE_URL
+REDIS_URL
+SERVER_URL
+EMAIL_FROM_EMAIL
+
+ACCESS_TOKEN_SECRET
+ACCESS_TOKEN_EXPIRES
+REFRESH_TOKEN_SECRET
+REFRESH_TOKEN_EXPIRES
+PASSWORD_RESET_TOKEN_SECRET
+```
+
+Provider configuration includes credentials for:
+
+```text
+Stripe
+bKash
+Resend
+Cloudinary
+```
+
+Application configuration is validated with **Zod** during startup.
+
+Never commit `.env`, `.env.docker`, or production credentials.
+
+---
+
+## Useful Commands
+
+| Command                      | Purpose                             |
+| ---------------------------- | ----------------------------------- |
+| `pnpm start:dev`             | Start development server            |
+| `pnpm build`                 | Build the application               |
+| `pnpm start:prod`            | Run the production build            |
+| `pnpm lint`                  | Run ESLint                          |
+| `pnpm lint:fix`              | Automatically fix lint issues       |
+| `pnpm test`                  | Run unit tests                      |
+| `pnpm test:e2e`              | Run end-to-end tests                |
+| `pnpm prisma migrate dev`    | Create/apply development migrations |
+| `pnpm prisma migrate deploy` | Apply production migrations         |
+| `pnpm prisma db seed`        | Reset and seed demo data            |
 
 ---
 
 ## Project Structure
 
 ```text
-order-flow/
-├── prisma/
-│   ├── migrations/
-│   ├── schema.prisma
-│   └── seed.ts
-│
-├── src/
-│   ├── common/
-│   ├── generated/
-│   ├── jobs/
-│   ├── modules/
-│   │   ├── auth/
-│   │   ├── category/
-│   │   ├── orders/
-│   │   ├── payment/
-│   │   ├── products/
-│   │   ├── shipping-address/
-│   │   └── user/
-│   ├── app.module.ts
-│   └── main.ts
-│
-├── compose.yml
-├── Dockerfile
-├── prisma.config.ts
-└── package.json
+prisma/
+├── schema.prisma
+├── migrations/
+└── seed.ts
+
+src/
+├── common/              # Shared infrastructure and utilities
+├── jobs/                # Scheduled background jobs
+├── modules/
+│   ├── auth/
+│   ├── users/
+│   ├── products/
+│   ├── categories/
+│   ├── carts/
+│   ├── orders/
+│   ├── payments/
+│   └── addresses/
+└── generated/prisma/    # Generated Prisma client
+
+docs/                    # Infrastructure documentation
+compose.yml              # Local infrastructure
+Dockerfile               # Production container
 ```
-
----
-
-## Quick Start
-
-**Prerequisites:** Node.js 24+, pnpm, PostgreSQL 17, Redis (or use Docker below)
-
-```bash
-# Clone
-git clone https://github.com/habib33-3/order-flow.git
-cd order-flow
-
-# Install
-pnpm install
-
-# Configure environment
-cp .env.example .env
-# → update the values in .env
-
-# Run migrations
-pnpm prisma migrate dev
-
-# (optional) seed demo data
-pnpm prisma db seed
-
-# Start dev server
-pnpm start:dev
-```
-
-API available at **<http://localhost:5000>** · Swagger at **<http://localhost:5000/api/docs>**
-
-### Docker Development
-
-```bash
-# .env.docker is gitignored — create it from .env.example first
-cp .env.example .env.docker
-
-docker compose up --build
-docker compose exec app pnpm prisma migrate deploy
-docker compose exec app pnpm prisma db seed # optional
-```
-
-Update `.env.docker` with the same variables as `.env.example`, but point database and Redis connection strings to the Compose service hostnames (e.g. `postgres`, `redis`) instead of `localhost`. **Never commit this file or reuse production secrets in it.**
-
-App available at **<http://localhost:5000>**.
-
----
-
-## Environment Variables
-
-Copy `.env.example` → `.env`. All variables are validated at startup with **Zod**, so misconfiguration fails fast instead of surfacing as a runtime bug.
-
-Configuration covers: PostgreSQL, Redis, JWT secrets, Stripe, bKash, Cloudinary, Resend, and client/server URLs.
-
-Generate JWT secrets with:
-
-```bash
-openssl rand -base64 32
-```
-
----
-
-## Development Commands
-
-```bash
-pnpm start:dev # dev server with hot reload
-pnpm build     # production build
-pnpm lint      # lint check
-pnpm lint:fix  # lint + autofix
-pnpm format    # prettier
-pnpm test      # unit tests
-pnpm test:e2e  # e2e tests
-pnpm test:cov  # coverage report
-```
-
----
-
-## Deployment & CI/CD
-
-Deployed on **Render**, with **PostgreSQL** (Neon), **Redis**, **Cloudinary**, **Stripe**, and **Resend** as managed dependencies.
-
-On every push to `main`, **GitHub Actions**:
-
-1. Builds the application
-2. Runs lint checks
-3. Deploys Prisma migrations against the production database
-4. Builds and publishes a Docker image to Docker Hub
-
----
-
-## Roadmap
-
-- [x] JWT authentication with refresh rotation
-- [x] Role-based authorization
-- [x] Product management
-- [x] Order management
-- [x] Shipping addresses
-- [x] Stripe integration
-- [x] bKash integration
-- [x] Redis caching
-- [x] Docker support
-- [x] GitHub Actions CI/CD
-- [ ] BullMQ email queue
-- [x] Inventory reservation
-- [ ] Order analytics dashboard
-- [ ] Comprehensive integration test suite
 
 ---
 
 ## License
 
-MIT License — see [LICENSE](LICENSE) for details.
+This project is licensed under the [MIT License](License).
