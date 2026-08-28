@@ -1,6 +1,6 @@
 export const QUEUE_NAMES = {
     EMAIL: "email",
-    INVOICE: "invoice",
+    PAYMENT: "payment",
 } as const;
 
 export type QueueName = keyof typeof QUEUE_NAMES;
