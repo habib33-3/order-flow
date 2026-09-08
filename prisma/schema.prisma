@@ -230,28 +230,28 @@ enum PaymentProvider {
 }
 
 model Coupon {
-  id                    String       @id @default(cuid())
-  type                  CouponType
-  code                  String       @unique
-  discount              Decimal
+  id       String     @id @default(cuid())
+  type     CouponType
+  code     String     @unique
+  discount Decimal
 
-  startAt               DateTime
-  endAt                 DateTime
+  startAt DateTime
+  endAt   DateTime
 
- minimumOrderAmount Decimal?
-maximumDiscountAmount Decimal?
+  minimumOrderAmount    Decimal?
+  maximumDiscountAmount Decimal?
 
-  status                CouponStatus @default(INACTIVE)
+  status CouponStatus @default(INACTIVE)
 
-  maxLimit              Int          @default(1)
-  remainingLimit        Int          @default(1)
+  maxLimit       Int @default(1)
+  remainingLimit Int @default(1)
 
-  maxLimitPerUser       Int          @default(1)
+  maxLimitPerUser Int @default(1)
 
-  createdAt             DateTime     @default(now())
-  updatedAt             DateTime     @updatedAt
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-  couponRedeems         CouponRedeem[]
+  couponRedeems CouponRedeem[]
 }
 
 enum CouponStatus {
@@ -266,12 +266,12 @@ enum CouponType {
 }
 
 model CouponRedeem {
-  id        String   @id @default(cuid())
-  userId    String
-  couponId  String
+  id       String @id @default(cuid())
+  userId   String
+  couponId String
 
-  coupon    Coupon   @relation(fields: [couponId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt

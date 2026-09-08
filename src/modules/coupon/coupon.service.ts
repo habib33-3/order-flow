@@ -4,7 +4,7 @@ import { BadRequestException, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
 import { Prisma } from "src/generated/prisma/client";
-import { CouponType } from "src/generated/prisma/enums";
+import { CouponStatus, CouponType } from "src/generated/prisma/enums";
 
 import { CreateCouponDto } from "./dto/create-coupon.dto";
 
@@ -79,6 +79,38 @@ export class CouponService {
                 maxLimitPerUser: payload.maxLimitPerUser,
                 remainingLimit: payload.maxLimit,
             },
+        });
+    }
+
+    async getCoupons(
+        search?: string,
+        sortBy?: "createdAt" | "discount" | "maxLimit",
+        sort?: "asc" | "desc",
+        filter?: CouponStatus
+    ) {
+        const where: Prisma.CouponWhereInput = {};
+
+        if (search) {
+            search = search.trim();
+            where.code = {
+                contains: search,
+                mode: "insensitive",
+            };
+        }
+
+        if (filter) {
+            where.status = filter;
+        }
+
+        return this.prisma.coupon.findMany({
+            where,
+            orderBy: sortBy
+                ? {
+                      [sortBy]: sort ?? "desc",
+                  }
+                : {
+                      createdAt: "desc",
+                  },
         });
     }
 }
