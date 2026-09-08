@@ -8,7 +8,7 @@ export class CreateShippingAddressDto {
         description: "Address title",
     })
     @IsString()
-    title: string;
+    title!: string;
 
     @ApiProperty({
         example: "123 Main Street, Apartment 4B",
@@ -16,7 +16,7 @@ export class CreateShippingAddressDto {
     })
     @IsString()
     @MaxLength(255)
-    address: string;
+    address!: string;
 
     @ApiProperty({
         example: "Dhaka",
@@ -24,7 +24,7 @@ export class CreateShippingAddressDto {
     })
     @IsString()
     @MaxLength(100)
-    city: string;
+    city!: string;
 
     @ApiPropertyOptional({
         example: "Dhaka Division",
@@ -41,12 +41,12 @@ export class CreateShippingAddressDto {
     })
     @IsString()
     @MaxLength(100)
-    country: string;
+    country!: string;
 
     @ApiProperty({
         example: "1207",
         description: "Postal or ZIP code",
     })
     @IsPostalCode("any")
-    postalCode: string;
+    postalCode!: string;
 }

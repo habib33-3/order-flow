@@ -3,7 +3,7 @@ import { NestFactory } from "@nestjs/core";
 
 import helmet from "helmet";
 
-import { AppModule } from "./app.module";
+import { AppModule, ObserveInstrument } from "./app.module";
 import { env } from "./common/env/env";
 import { GlobalExceptionFilter } from "./common/filters/global-exception.filter";
 import { setupSwagger } from "./common/swagger/swagger";
@@ -11,6 +11,7 @@ import { setupSwagger } from "./common/swagger/swagger";
 async function bootstrap() {
     const app = await NestFactory.create(AppModule, {
         rawBody: true,
+        instrument: ObserveInstrument,
     });
 
     app.enableShutdownHooks();

@@ -20,7 +20,7 @@ class CartItemDto {
     })
     @IsString()
     @IsNotEmpty()
-    productId: string;
+    productId!: string;
 
     @ApiProperty({
         description: "Quantity of the product",
@@ -31,7 +31,7 @@ class CartItemDto {
     @IsInt()
     @Max(100)
     @IsPositive()
-    quantity: number;
+    quantity!: number;
 }
 
 export class ManageCartDto {
@@ -54,5 +54,5 @@ export class ManageCartDto {
     @ArrayMaxSize(100)
     @ValidateNested({ each: true })
     @Type(() => CartItemDto)
-    items: CartItemDto[];
+    items!: CartItemDto[];
 }

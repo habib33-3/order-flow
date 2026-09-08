@@ -9,5 +9,5 @@ export class AddItemToCartDto {
     })
     @IsString()
     @IsNotEmpty()
-    productId: string;
+    productId!: string;
 }

@@ -9,7 +9,7 @@ export class VerifyOtpEmailDto {
     })
     @IsEmail()
     @IsNotEmpty()
-    email: string;
+    email!: string;
 
     @ApiProperty({
         example: "1234",
@@ -19,5 +19,5 @@ export class VerifyOtpEmailDto {
     @Matches(/^\d{4}$/, {
         message: "OTP must be exactly 4 digits",
     })
-    otp: string;
+    otp!: string;
 }

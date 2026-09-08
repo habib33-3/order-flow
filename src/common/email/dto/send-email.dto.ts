@@ -2,14 +2,14 @@ import { IsEmail, IsObject, IsString } from "class-validator";
 
 export class SendEmailDto {
     @IsEmail()
-    to: string;
+    to!: string;
 
     @IsString()
-    subject: string;
+    subject!: string;
 
     @IsString()
-    template: string;
+    template!: string;
 
     @IsObject()
-    context: Record<string, unknown>;
+    context!: Record<string, unknown>;
 }

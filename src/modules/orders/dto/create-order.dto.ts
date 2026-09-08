@@ -15,7 +15,7 @@ export class CreateOrderDto {
     })
     @IsString()
     @IsNotEmpty()
-    shippingAddressId: string;
+    shippingAddressId!: string;
 
     @ApiProperty({
         description: "The payment provider to use for the order.",
@@ -24,7 +24,7 @@ export class CreateOrderDto {
         example: PaymentProvider.STRIPE,
     })
     @IsEnum(PaymentProvider)
-    paymentProvider: PaymentProvider;
+    paymentProvider!: PaymentProvider;
 
     @ApiProperty({
         description: "The currency used for the order.",
@@ -32,7 +32,7 @@ export class CreateOrderDto {
         example: Currency.USD,
     })
     @IsEnum(Currency)
-    currency: Currency;
+    currency!: Currency;
 
     @IsString()
     @MaxLength(500)

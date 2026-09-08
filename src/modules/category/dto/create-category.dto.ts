@@ -14,7 +14,7 @@ export class CreateCategoryDto {
     @IsString()
     @MinLength(2)
     @MaxLength(100)
-    name: string;
+    name!: string;
 
     @ApiPropertyOptional({
         example: "Electronic devices and accessories",
@@ -31,5 +31,5 @@ export class CreateCategoryDto {
         format: "binary",
         description: "Category image",
     })
-    image: Express.Multer.File;
+    image?: Express.Multer.File;
 }

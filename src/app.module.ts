@@ -1,11 +1,12 @@
 import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { APP_GUARD } from "@nestjs/core";
+import { createObserveModule } from "@nestjs/observe";
 
 import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { EmailModule } from "./common/email/email.module";
-import { validateEnv } from "./common/env/env";
+import { env, validateEnv } from "./common/env/env";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { QueueModule } from "./common/queue/queue.module";
 import { RedisModule } from "./common/redis/redis.module";
@@ -22,6 +23,8 @@ import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
 import { ShippingAddressModule } from "./modules/shipping-address/shipping-address.module";
 import { UserModule } from "./modules/user/user.module";
+
+export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
 @Module({
     imports: [
@@ -46,6 +49,11 @@ import { UserModule } from "./modules/user/user.module";
         CartModule,
         QueueModule.forRoot(),
         CouponModule,
+        ObserveModule.forRoot({
+            appKey: env.OBSERVE_APP_KEY,
+            appSecret: env.OBSERVE_APP_SECRET,
+            serviceId: "order-flow",
+        }),
     ],
     controllers: [AppController],
     providers: [

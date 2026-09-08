@@ -17,7 +17,7 @@ export class ForgotPasswordDto {
         description: "The email address associated with the account.",
     })
     @IsEmail({}, { message: "Please provide a valid email address." })
-    email: string;
+    email!: string;
 }
 
 export class VerifyForgotPasswordOtpDto {
@@ -32,7 +32,7 @@ export class VerifyForgotPasswordOtpDto {
     @Matches(/^\d{6}$/, {
         message: "OTP must be a 6-digit number.",
     })
-    otp: string;
+    otp!: string;
 
     @ApiProperty({
         example: "user@example.com",
@@ -44,7 +44,7 @@ export class VerifyForgotPasswordOtpDto {
             message: "Please provide a valid email address.",
         }
     )
-    email: string;
+    email!: string;
 }
 
 export class ResetPasswordDto {
@@ -55,7 +55,7 @@ export class ResetPasswordDto {
     @IsJWT({
         message: "Invalid password reset token.",
     })
-    token: string;
+    token!: string;
 
     @ApiProperty({
         description: "The new password for the account.",
@@ -71,5 +71,5 @@ export class ResetPasswordDto {
     @MaxLength(128, {
         message: "Password must not exceed 128 characters.",
     })
-    newPassword: string;
+    newPassword!: string;
 }

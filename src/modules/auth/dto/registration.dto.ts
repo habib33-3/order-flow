@@ -19,7 +19,7 @@ export class RegisterUserDto {
     @IsNotEmpty()
     @MinLength(2)
     @MaxLength(100)
-    name: string;
+    name!: string;
 
     @ApiProperty({
         example: "john.doe@example.com",
@@ -27,7 +27,7 @@ export class RegisterUserDto {
     })
     @IsEmail()
     @IsNotEmpty()
-    email: string;
+    email!: string;
 
     @ApiProperty({
         example: "123456",
@@ -39,5 +39,5 @@ export class RegisterUserDto {
     @IsNotEmpty()
     @MinLength(6)
     @MaxLength(64)
-    password: string;
+    password!: string;
 }

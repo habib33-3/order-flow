@@ -1,5 +1,6 @@
 import { Module } from "@nestjs/common";
 import { JwtModule } from "@nestjs/jwt";
+import { PassportModule } from "@nestjs/passport";
 
 import { UserService } from "../user/user.service";
 import { AuthController } from "./auth.controller";
@@ -8,7 +9,12 @@ import { AccessTokenStrategy } from "./strategies/access-token.strategy";
 import { RefreshTokenStrategy } from "./strategies/refresh-token.strategy";
 
 @Module({
-    imports: [JwtModule],
+    imports: [
+        JwtModule,
+        PassportModule.register({
+            defaultStrategy: "jwt",
+        }),
+    ],
     controllers: [AuthController],
     providers: [
         AuthService,

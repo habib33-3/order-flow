@@ -19,7 +19,7 @@ export class CreateCouponDto {
         example: CouponType.PERCENTAGE,
     })
     @IsEnum(CouponType)
-    type: CouponType;
+    type!: CouponType;
 
     @ApiProperty({
         description:
@@ -27,7 +27,7 @@ export class CreateCouponDto {
         example: "20.00",
     })
     @IsNumberString()
-    discount: string;
+    discount!: string;
 
     @ApiProperty({
         description: "Date and time when the coupon becomes valid.",
@@ -35,7 +35,7 @@ export class CreateCouponDto {
     })
     @Type(() => Date)
     @IsDate()
-    startAt: Date;
+    startAt!: Date;
 
     @ApiProperty({
         description: "Date and time when the coupon expires.",
@@ -43,7 +43,7 @@ export class CreateCouponDto {
     })
     @Type(() => Date)
     @IsDate()
-    endAt: Date;
+    endAt!: Date;
 
     @ApiPropertyOptional({
         description:
