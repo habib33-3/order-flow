@@ -2,11 +2,12 @@ import {
     Body,
     Controller,
     Get,
+    Param,
     ParseEnumPipe,
     Post,
     Query,
 } from "@nestjs/common";
-import { ApiOperation, ApiQuery } from "@nestjs/swagger";
+import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 
 import { AdminGuard } from "src/common/guards/admin.guard";
 import { CouponStatus } from "src/generated/prisma/enums";
@@ -29,6 +30,7 @@ export class CouponController {
         return this.couponService.createCoupon(payload);
     }
 
+    @AdminGuard()
     @Get()
     @ApiOperation({
         summary: "Get all coupons",
@@ -77,5 +79,36 @@ export class CouponController {
         filter?: CouponStatus
     ) {
         return this.couponService.getCoupons(search, sortBy, sort, filter);
+    }
+
+    @Get("/code/:code")
+    @ApiOperation({
+        summary: "Get coupon by code",
+        description: "Retrieves a coupon by its code.",
+    })
+    @ApiParam({
+        name: "code",
+        required: true,
+        type: String,
+        description: "The coupon code to retrieve",
+    })
+    async getCouponByCode(@Param("code") code: string) {
+        return this.couponService.getCouponByCode(code);
+    }
+
+    @AdminGuard()
+    @Get("/:id")
+    @ApiOperation({
+        summary: "Get coupon by id",
+        description: "Retrieves a coupon by its id.",
+    })
+    @ApiParam({
+        name: "id",
+        required: true,
+        type: String,
+        description: "The coupon id to retrieve",
+    })
+    async getCouponById(@Param("id") id: string) {
+        return this.couponService.getCouponById(id);
     }
 }

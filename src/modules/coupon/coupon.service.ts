@@ -1,8 +1,18 @@
 import { randomBytes } from "node:crypto";
 
-import { BadRequestException, Injectable } from "@nestjs/common";
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
+import {
+    couponCacheKeyWithCode,
+    couponCacheKeyWithId,
+    couponListCache,
+} from "src/common/redis/cache-key";
+import { RedisService } from "src/common/redis/redis.service";
 import { Prisma } from "src/generated/prisma/client";
 import { CouponStatus, CouponType } from "src/generated/prisma/enums";
 
@@ -10,7 +20,10 @@ import { CreateCouponDto } from "./dto/create-coupon.dto";
 
 @Injectable()
 export class CouponService {
-    constructor(private readonly prisma: PrismaService) {}
+    constructor(
+        private readonly prisma: PrismaService,
+        private readonly cache: RedisService
+    ) {}
 
     private validateCouponCreation(
         payload: CreateCouponDto,
@@ -66,7 +79,7 @@ export class CouponService {
             ? new Prisma.Decimal(payload.maximumDiscountAmount)
             : undefined;
 
-        return this.prisma.coupon.create({
+        const coupon = this.prisma.coupon.create({
             data: {
                 type: payload.type,
                 code,
@@ -80,6 +93,13 @@ export class CouponService {
                 remainingLimit: payload.maxLimit,
             },
         });
+
+        await Promise.all([
+            this.cache.set(couponCacheKeyWithCode(code), coupon),
+            this.cache.delete(couponListCache()),
+        ]);
+
+        return coupon;
     }
 
     async getCoupons(
@@ -88,6 +108,14 @@ export class CouponService {
         sort?: "asc" | "desc",
         filter?: CouponStatus
     ) {
+        const key = couponListCache(search, sortBy, sort, filter);
+
+        const cachedCoupons = await this.cache.get(key);
+
+        if (cachedCoupons !== null) {
+            return cachedCoupons;
+        }
+
         const where: Prisma.CouponWhereInput = {};
 
         if (search) {
@@ -102,7 +130,7 @@ export class CouponService {
             where.status = filter;
         }
 
-        return this.prisma.coupon.findMany({
+        const coupons = await this.prisma.coupon.findMany({
             where,
             orderBy: sortBy
                 ? {
@@ -112,5 +140,72 @@ export class CouponService {
                       createdAt: "desc",
                   },
         });
+
+        await this.cache.set(key, coupons);
+
+        return coupons;
+    }
+
+    async getCouponByCode(code: string) {
+        const key = couponCacheKeyWithCode(code);
+
+        const cachedCoupon = await this.cache.get(key);
+
+        if (cachedCoupon !== null) {
+            return cachedCoupon;
+        }
+
+        const coupon = await this.prisma.coupon.findUnique({
+            where: { code },
+            select: {
+                type: true,
+                code: true,
+                discount: true,
+                startAt: true,
+                endAt: true,
+                minimumOrderAmount: true,
+                maximumDiscountAmount: true,
+            },
+        });
+
+        if (!coupon) {
+            throw new NotFoundException("Coupon not found");
+        }
+
+        const now = new Date();
+
+        if (now < coupon.startAt) {
+            throw new BadRequestException("Coupon is not active yet");
+        }
+
+        if (now > coupon.endAt) {
+            throw new BadRequestException("Coupon has expired");
+        }
+
+        await this.cache.set(key, coupon);
+
+        return coupon;
+    }
+
+    async getCouponById(id: string) {
+        const key = couponCacheKeyWithId(id);
+
+        const cachedCoupon = await this.cache.get(key);
+
+        if (cachedCoupon !== null) {
+            return cachedCoupon;
+        }
+
+        const coupon = await this.prisma.coupon.findUnique({
+            where: { id },
+        });
+
+        if (!coupon) {
+            throw new NotFoundException("Coupon not found");
+        }
+
+        await this.cache.set(key, coupon);
+
+        return coupon;
     }
 }
