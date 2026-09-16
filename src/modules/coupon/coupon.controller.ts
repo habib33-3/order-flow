@@ -4,6 +4,7 @@ import {
     Get,
     Param,
     ParseEnumPipe,
+    Patch,
     Post,
     Query,
 } from "@nestjs/common";
@@ -14,6 +15,7 @@ import { CouponStatus } from "src/generated/prisma/enums";
 
 import { CouponService } from "./coupon.service";
 import { CreateCouponDto } from "./dto/create-coupon.dto";
+import { UpdateCouponDto } from "./dto/update-coupon.dto";
 
 @Controller("coupon")
 export class CouponController {
@@ -110,5 +112,23 @@ export class CouponController {
     })
     async getCouponById(@Param("id") id: string) {
         return this.couponService.getCouponById(id);
+    }
+
+    @AdminGuard()
+    @Patch(":id")
+    @ApiOperation({
+        summary: "Update coupon details",
+        description: "Updates the configurable details of an existing coupon.",
+    })
+    @ApiParam({
+        name: "id",
+        type: String,
+        description: "Unique identifier of the coupon to update",
+    })
+    async updateCoupon(
+        @Param("id") id: string,
+        @Body() payload: UpdateCouponDto
+    ) {
+        return this.couponService.updateCoupon(payload, id);
     }
 }

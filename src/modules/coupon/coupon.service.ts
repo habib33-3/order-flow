@@ -13,10 +13,11 @@ import {
     couponListCache,
 } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
-import { Prisma } from "src/generated/prisma/client";
+import { Coupon, Prisma } from "src/generated/prisma/client";
 import { CouponStatus, CouponType } from "src/generated/prisma/enums";
 
 import { CreateCouponDto } from "./dto/create-coupon.dto";
+import { UpdateCouponDto } from "./dto/update-coupon.dto";
 
 @Injectable()
 export class CouponService {
@@ -79,7 +80,7 @@ export class CouponService {
             ? new Prisma.Decimal(payload.maximumDiscountAmount)
             : undefined;
 
-        const coupon = this.prisma.coupon.create({
+        const coupon = await this.prisma.coupon.create({
             data: {
                 type: payload.type,
                 code,
@@ -96,6 +97,7 @@ export class CouponService {
 
         await Promise.all([
             this.cache.set(couponCacheKeyWithCode(code), coupon),
+            this.cache.set(couponCacheKeyWithId(coupon.id), coupon),
             this.cache.delete(couponListCache()),
         ]);
 
@@ -190,7 +192,7 @@ export class CouponService {
     async getCouponById(id: string) {
         const key = couponCacheKeyWithId(id);
 
-        const cachedCoupon = await this.cache.get(key);
+        const cachedCoupon = await this.cache.get<Coupon>(key);
 
         if (cachedCoupon !== null) {
             return cachedCoupon;
@@ -207,5 +209,78 @@ export class CouponService {
         await this.cache.set(key, coupon);
 
         return coupon;
+    }
+
+    async updateCoupon(payload: UpdateCouponDto, id: string) {
+        const coupon = await this.getCouponById(id);
+
+        const redeemedCount = coupon.maxLimit - coupon.remainingLimit;
+
+        if (
+            payload.maxLimit !== undefined &&
+            payload.maxLimit < redeemedCount
+        ) {
+            throw new BadRequestException(
+                "Maximum limit cannot be less than the number of redeemed coupons"
+            );
+        }
+
+        if (
+            payload.maxLimitPerUser !== undefined &&
+            payload.maxLimitPerUser > (payload.maxLimit ?? coupon.maxLimit)
+        ) {
+            throw new BadRequestException(
+                "Maximum limit per user cannot exceed the maximum coupon limit"
+            );
+        }
+
+        const startAt = payload.startAt ?? coupon.startAt;
+        const endAt = payload.endAt ?? coupon.endAt;
+
+        if (startAt >= endAt) {
+            throw new BadRequestException("Start date must be before end date");
+        }
+
+        const updateData: Prisma.CouponUncheckedUpdateInput = {};
+
+        if (payload.startAt !== undefined) {
+            updateData.startAt = payload.startAt;
+        }
+
+        if (payload.endAt !== undefined) {
+            updateData.endAt = payload.endAt;
+        }
+
+        if (payload.minimumOrderAmount !== undefined) {
+            updateData.minimumOrderAmount = payload.minimumOrderAmount;
+        }
+
+        if (payload.maximumDiscountAmount !== undefined) {
+            updateData.maximumDiscountAmount = payload.maximumDiscountAmount;
+        }
+
+        if (payload.status !== undefined) {
+            updateData.status = payload.status;
+        }
+
+        if (payload.maxLimit !== undefined) {
+            updateData.maxLimit = payload.maxLimit;
+            updateData.remainingLimit = payload.maxLimit - redeemedCount;
+        }
+
+        if (payload.maxLimitPerUser !== undefined) {
+            updateData.maxLimitPerUser = payload.maxLimitPerUser;
+        }
+
+        await this.prisma.coupon.update({
+            where: { id: coupon.id },
+            data: updateData,
+        });
+
+        await Promise.all([
+            this.cache.set(couponCacheKeyWithCode(coupon.code), coupon),
+            this.cache.set(couponCacheKeyWithId(coupon.id), coupon),
+            this.cache.delete(couponListCache()),
+        ]);
     }
 }
