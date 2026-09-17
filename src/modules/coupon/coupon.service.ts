@@ -6,6 +6,7 @@ import {
     NotFoundException,
 } from "@nestjs/common";
 
+import { Decimal } from "@prisma/client/runtime/client";
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
     couponCacheKeyWithCode,
@@ -151,7 +152,16 @@ export class CouponService {
     async getCouponByCode(code: string) {
         const key = couponCacheKeyWithCode(code);
 
-        const cachedCoupon = await this.cache.get(key);
+        const cachedCoupon = await this.cache.get<{
+            id: string;
+            type: CouponType;
+            code: string;
+            discount: Decimal;
+            startAt: Date;
+            endAt: Date;
+            minimumOrderAmount: Decimal | null;
+            maximumDiscountAmount: Decimal | null;
+        }>(key);
 
         if (cachedCoupon !== null) {
             return cachedCoupon;
@@ -160,6 +170,7 @@ export class CouponService {
         const coupon = await this.prisma.coupon.findUnique({
             where: { code },
             select: {
+                id: true,
                 type: true,
                 code: true,
                 discount: true,
@@ -282,5 +293,98 @@ export class CouponService {
             this.cache.set(couponCacheKeyWithId(coupon.id), coupon),
             this.cache.delete(couponListCache()),
         ]);
+    }
+
+    async redeemCoupon(
+        code: string,
+        userId: string,
+        totalAmount: number,
+        tx: Prisma.TransactionClient
+    ) {
+        const coupon = await tx.coupon.findUnique({
+            where: { code },
+        });
+
+        if (!coupon) {
+            throw new BadRequestException("Coupon not found");
+        }
+
+        const now = new Date();
+
+        if (coupon.status !== CouponStatus.ACTIVE) {
+            throw new BadRequestException("Coupon is not active");
+        }
+
+        if (now < coupon.startAt || now > coupon.endAt) {
+            throw new BadRequestException("Coupon is not available");
+        }
+
+        if (coupon.remainingLimit <= 0) {
+            throw new BadRequestException("Coupon is fully redeemed");
+        }
+
+        if (
+            coupon.minimumOrderAmount &&
+            totalAmount < Number(coupon.minimumOrderAmount)
+        ) {
+            throw new BadRequestException(
+                `Minimum order amount is ${coupon.minimumOrderAmount}`
+            );
+        }
+
+        const userRedeemCount = await tx.couponRedeem.count({
+            where: {
+                couponId: coupon.id,
+                userId,
+            },
+        });
+
+        if (userRedeemCount >= coupon.maxLimitPerUser) {
+            throw new BadRequestException(
+                "You have reached the redemption limit for this coupon"
+            );
+        }
+
+        const discount =
+            coupon.type === CouponType.PERCENTAGE
+                ? Math.min(
+                      (totalAmount * Number(coupon.discount)) / 100,
+                      coupon.maximumDiscountAmount
+                          ? Number(coupon.maximumDiscountAmount)
+                          : Infinity
+                  )
+                : Math.min(Number(coupon.discount), totalAmount);
+
+        const updated = await tx.coupon.updateMany({
+            where: {
+                id: coupon.id,
+                remainingLimit: {
+                    gt: 0,
+                },
+            },
+            data: {
+                remainingLimit: {
+                    decrement: 1,
+                },
+            },
+        });
+
+        if (updated.count === 0) {
+            throw new BadRequestException("Coupon is fully redeemed");
+        }
+
+        await tx.couponRedeem.create({
+            data: {
+                couponId: coupon.id,
+                userId,
+            },
+        });
+
+        return {
+            couponId: coupon.id,
+            code: coupon.code,
+            discount: new Prisma.Decimal(discount),
+            finalAmount: totalAmount - discount,
+        };
     }
 }
