@@ -17,7 +17,8 @@ import { AccessTokenGuard } from "./modules/auth/guards/access-token.guard";
 import { PasswordModule } from "./modules/auth/password/password.module";
 import { CartModule } from "./modules/cart/cart.module";
 import { CategoryModule } from "./modules/category/category.module";
-import { CouponModule } from "./modules/coupon/coupon.module";
+import { CouponAnalyticsModule } from "./modules/coupon/coupon-analytics/coupon-analytics.module";
+import { CouponModule } from "./modules/coupon/coupon/coupon.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
@@ -28,6 +29,11 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
 @Module({
     imports: [
+        ObserveModule.forRoot({
+            appKey: env.OBSERVE_APP_KEY,
+            appSecret: env.OBSERVE_APP_SECRET,
+            serviceId: "order-flow",
+        }),
         ConfigModule.forRoot({
             isGlobal: true,
             validate: validateEnv,
@@ -35,6 +41,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         }),
         PrismaModule,
         RedisModule,
+        QueueModule.forRoot(),
         AuthModule,
         ProductsModule,
         OrdersModule,
@@ -47,13 +54,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         UploadFileModule,
         CategoryModule,
         CartModule,
-        QueueModule.forRoot(),
         CouponModule,
-        ObserveModule.forRoot({
-            appKey: env.OBSERVE_APP_KEY,
-            appSecret: env.OBSERVE_APP_SECRET,
-            serviceId: "order-flow",
-        }),
+        CouponAnalyticsModule,
     ],
     controllers: [AppController],
     providers: [
