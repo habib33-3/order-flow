@@ -22,7 +22,7 @@
     "prepare": "husky",
     "postinstall": "prisma generate"
   },
-  "packageManager": "pnpm@11.13.1",
+  "packageManager": "pnpm@12.4.2",
   "dependencies": {
     "@bull-board/api": "^9.5.0",
     "@bull-board/express": "^9.5.0",

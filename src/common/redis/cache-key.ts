@@ -95,3 +95,33 @@ export const couponListCache = (
     sort?: "asc" | "desc",
     filter?: CouponStatus
 ) => withPrefix("coupon", "list", search, sortBy, sort, filter);
+
+export const userCouponRedemptionsCacheKey = (
+    userId: string,
+    search?: string,
+    sortBy: "createdAt" | "code" | "discount" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    page = 1,
+    limit = 10
+) =>
+    withPrefix(
+        "coupon",
+        "redemptions",
+        userId,
+        search,
+        sortBy,
+        sort,
+        page,
+        limit
+    );
+
+export const couponRedemptionsCacheKey = (
+    search?: string,
+    sortBy: "createdAt" | "code" | "discount" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    page = 1,
+    limit = 10
+) => withPrefix("coupon", "redemptions", search, sortBy, sort, page, limit);
+
+export const couponDistributionByTypeCacheKey = (year: number) =>
+    withPrefix("coupon", "distribution-by-type", year);

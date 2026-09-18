@@ -10,7 +10,8 @@ import { RedisService } from "src/common/redis/redis.service";
 import { Prisma, Product } from "src/generated/prisma/client";
 
 import { CartService } from "../cart/cart.service";
-import { CouponService } from "../coupon/coupon.service";
+import { CouponAnalyticsService } from "../coupon/coupon-analytics/coupon-analytics.service";
+import { CouponService } from "../coupon/coupon/coupon.service";
 import { PaymentService } from "../payment/payment.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { CreatedOrder, OrderCartItem } from "./type";
@@ -22,6 +23,7 @@ export class CreateOrderService {
         private readonly cartService: CartService,
         private readonly payment: PaymentService,
         private readonly couponService: CouponService,
+        private readonly couponAnalyticsService: CouponAnalyticsService,
         private readonly cache: RedisService
     ) {}
 
@@ -98,6 +100,10 @@ export class CreateOrderService {
                 this.cache.delete(couponCacheKeyWithId(coupon.couponId)),
                 this.cache.delete(couponListCache()),
             ]);
+
+            await this.couponAnalyticsService.invalidateCouponAnalyticsCache(
+                userId
+            );
         }
 
         return order;

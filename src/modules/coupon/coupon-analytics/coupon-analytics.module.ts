@@ -6,5 +6,6 @@ import { CouponAnalyticsService } from "./coupon-analytics.service";
 @Module({
     controllers: [CouponAnalyticsController],
     providers: [CouponAnalyticsService],
+    exports: [CouponAnalyticsService],
 })
 export class CouponAnalyticsModule {}
