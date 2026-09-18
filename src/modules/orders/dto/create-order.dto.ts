@@ -1,6 +1,13 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
-import { IsEnum, IsNotEmpty, IsString, MaxLength } from "class-validator";
+import { Transform } from "class-transformer";
+import {
+    IsEnum,
+    IsNotEmpty,
+    IsOptional,
+    IsString,
+    MaxLength,
+} from "class-validator";
 import { PaymentProvider } from "src/generated/prisma/enums";
 
 export enum Currency {
@@ -15,7 +22,7 @@ export class CreateOrderDto {
     })
     @IsString()
     @IsNotEmpty()
-    shippingAddressId: string;
+    shippingAddressId!: string;
 
     @ApiProperty({
         description: "The payment provider to use for the order.",
@@ -24,7 +31,7 @@ export class CreateOrderDto {
         example: PaymentProvider.STRIPE,
     })
     @IsEnum(PaymentProvider)
-    paymentProvider: PaymentProvider;
+    paymentProvider!: PaymentProvider;
 
     @ApiProperty({
         description: "The currency used for the order.",
@@ -32,9 +39,21 @@ export class CreateOrderDto {
         example: Currency.USD,
     })
     @IsEnum(Currency)
-    currency: Currency;
+    currency!: Currency;
 
     @IsString()
     @MaxLength(500)
     orderNote?: string;
+
+    @ApiPropertyOptional({
+        description: "The coupon code to apply to the order.",
+        example: "SAVE50",
+    })
+    @IsOptional()
+    @Transform(({ value }) =>
+        typeof value === "string" ? value.trim().toUpperCase() : value
+    )
+    @IsString()
+    @IsNotEmpty()
+    couponCode?: string;
 }

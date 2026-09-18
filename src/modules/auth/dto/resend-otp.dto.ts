@@ -8,5 +8,5 @@ export class ResendOtpDto {
         description: "The email address of the user requesting OTP resend",
         example: "user@example.com",
     })
-    email: string;
+    email!: string;
 }

@@ -1,11 +1,7 @@
-import { BullModule } from "@nestjs/bullmq";
 import { Global, Module } from "@nestjs/common";
 
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { BullBoardModule } from "@bull-board/nestjs";
-
+import { QueueRegistrationModule } from "../queue/queue-registration.module";
 import { QUEUE_NAMES } from "../queue/queue.constants";
-import { QueueModule } from "../queue/queue.module";
 import { EmailProcessor } from "./email.processor";
 import { EmailQueueService } from "./email.queue.service";
 import { EmailService } from "./email.service";
@@ -14,16 +10,7 @@ import { TemplateRenderService } from "./template-render.service";
 
 @Global()
 @Module({
-    imports: [
-        BullModule.registerQueue({
-            name: QUEUE_NAMES.EMAIL,
-        }),
-        QueueModule,
-        BullBoardModule.forFeature({
-            name: QUEUE_NAMES.EMAIL,
-            adapter: BullMQAdapter,
-        }),
-    ],
+    imports: [QueueRegistrationModule.register(QUEUE_NAMES.EMAIL)],
     providers: [
         EmailService,
         TemplateRenderService,

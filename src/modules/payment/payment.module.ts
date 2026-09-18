@@ -1,8 +1,6 @@
-import { BullModule } from "@nestjs/bullmq";
 import { Global, Module } from "@nestjs/common";
 
-import { BullMQAdapter } from "@bull-board/api/bullMQAdapter";
-import { BullBoardModule } from "@bull-board/nestjs";
+import { QueueRegistrationModule } from "src/common/queue/queue-registration.module";
 import { QUEUE_NAMES } from "src/common/queue/queue.constants";
 
 import { BkashCallbackController } from "./bkash/bkash-callback.controller";
@@ -17,15 +15,7 @@ import { StripeService } from "./stripe/stripe.service";
 
 @Global()
 @Module({
-    imports: [
-        BullModule.registerQueue({
-            name: QUEUE_NAMES.PAYMENT,
-        }),
-        BullBoardModule.forFeature({
-            name: QUEUE_NAMES.PAYMENT,
-            adapter: BullMQAdapter,
-        }),
-    ],
+    imports: [QueueRegistrationModule.register(QUEUE_NAMES.PAYMENT)],
     providers: [
         PaymentService,
         StripeStrategy,

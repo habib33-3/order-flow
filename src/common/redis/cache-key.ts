@@ -1,4 +1,4 @@
-import { ProductStatus } from "src/generated/prisma/enums";
+import { CouponStatus, ProductStatus } from "src/generated/prisma/enums";
 
 import { env } from "../env/env";
 
@@ -81,3 +81,47 @@ export const categoryListCacheKey = (search?: string) =>
 // Cart
 export const cartCacheKeyWithUserId = (userId: string) =>
     withPrefix("cart", "userId", userId);
+
+// coupon
+export const couponCacheKeyWithCode = (code: string) =>
+    withPrefix("coupon", "code", code);
+
+export const couponCacheKeyWithId = (id: string) =>
+    withPrefix("coupon", "id", id);
+
+export const couponListCache = (
+    search?: string,
+    sortBy?: "createdAt" | "discount" | "maxLimit",
+    sort?: "asc" | "desc",
+    filter?: CouponStatus
+) => withPrefix("coupon", "list", search, sortBy, sort, filter);
+
+export const userCouponRedemptionsCacheKey = (
+    userId: string,
+    search?: string,
+    sortBy: "createdAt" | "code" | "discount" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    page = 1,
+    limit = 10
+) =>
+    withPrefix(
+        "coupon",
+        "redemptions",
+        userId,
+        search,
+        sortBy,
+        sort,
+        page,
+        limit
+    );
+
+export const couponRedemptionsCacheKey = (
+    search?: string,
+    sortBy: "createdAt" | "code" | "discount" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    page = 1,
+    limit = 10
+) => withPrefix("coupon", "redemptions", search, sortBy, sort, page, limit);
+
+export const couponDistributionByTypeCacheKey = (year: number) =>
+    withPrefix("coupon", "distribution-by-type", year);

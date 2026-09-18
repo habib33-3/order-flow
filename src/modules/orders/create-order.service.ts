@@ -1,9 +1,17 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
+import {
+    couponCacheKeyWithCode,
+    couponCacheKeyWithId,
+    couponListCache,
+} from "src/common/redis/cache-key";
+import { RedisService } from "src/common/redis/redis.service";
 import { Prisma, Product } from "src/generated/prisma/client";
 
 import { CartService } from "../cart/cart.service";
+import { CouponAnalyticsService } from "../coupon/coupon-analytics/coupon-analytics.service";
+import { CouponService } from "../coupon/coupon/coupon.service";
 import { PaymentService } from "../payment/payment.service";
 import { CreateOrderDto } from "./dto/create-order.dto";
 import { CreatedOrder, OrderCartItem } from "./type";
@@ -13,7 +21,10 @@ export class CreateOrderService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly cartService: CartService,
-        private readonly payment: PaymentService
+        private readonly payment: PaymentService,
+        private readonly couponService: CouponService,
+        private readonly couponAnalyticsService: CouponAnalyticsService,
+        private readonly cache: RedisService
     ) {}
 
     async getValidatedCartItems(userId: string) {
@@ -30,11 +41,12 @@ export class CreateOrderService {
         userId: string,
         cartItems: OrderCartItem[],
         shippingAddress: string,
-        orderNote?: string
+        orderNote?: string,
+        couponCode?: string
     ): Promise<CreatedOrder> {
         const productIds = cartItems.map((item) => item.product.id);
 
-        return this.prisma.$transaction(async (tx) => {
+        const { order, coupon } = await this.prisma.$transaction(async (tx) => {
             const products = await this.findProductsForOrder(tx, productIds);
 
             const orderItems = this.buildValidatedOrderItems(
@@ -44,19 +56,57 @@ export class CreateOrderService {
 
             const orderTotal = this.calculateOrderTotal(orderItems);
 
+            const coupon = couponCode
+                ? await this.couponService.redeemCoupon(
+                      couponCode,
+                      userId,
+                      orderTotal.toNumber(),
+                      tx
+                  )
+                : null;
+
+            const finalTotal = coupon
+                ? orderTotal.sub(coupon.discount)
+                : orderTotal;
+
             const order = await this.persistOrder(
                 tx,
                 userId,
                 orderTotal,
+                finalTotal,
+                coupon
+                    ? {
+                          couponId: coupon.couponId,
+                          code: coupon.code,
+                          discount: coupon.discount,
+                      }
+                    : null,
                 shippingAddress,
                 orderNote,
                 orderItems
             );
-
             await this.reserveProductsStock(tx, cartItems);
 
-            return order;
+            return {
+                order,
+                coupon,
+            };
         });
+
+        // Only invalidate cache after the transaction successfully commits.
+        if (coupon) {
+            await Promise.all([
+                this.cache.delete(couponCacheKeyWithCode(coupon.code)),
+                this.cache.delete(couponCacheKeyWithId(coupon.couponId)),
+                this.cache.delete(couponListCache()),
+            ]);
+
+            await this.couponAnalyticsService.invalidateCouponAnalyticsCache(
+                userId
+            );
+        }
+
+        return order;
     }
 
     private async findProductsForOrder(
@@ -132,7 +182,13 @@ export class CreateOrderService {
     private async persistOrder(
         tx: Prisma.TransactionClient,
         userId: string,
-        orderTotal: Prisma.Decimal,
+        subtotal: Prisma.Decimal,
+        total: Prisma.Decimal,
+        coupon: {
+            couponId: string;
+            code: string;
+            discount: Prisma.Decimal;
+        } | null,
         shippingAddress: string,
         orderNote: string | undefined,
         orderItems: {
@@ -145,7 +201,11 @@ export class CreateOrderService {
         return tx.order.create({
             data: {
                 userId,
-                total: orderTotal,
+                subtotal,
+                total,
+                discountAmount: coupon?.discount ?? new Prisma.Decimal(0),
+                couponId: coupon?.couponId,
+                couponCode: coupon?.code,
                 shippingAddress,
                 note: orderNote,
                 items: {
@@ -156,7 +216,11 @@ export class CreateOrderService {
             },
             select: {
                 id: true,
+                subtotal: true,
+                discountAmount: true,
                 total: true,
+                couponId: true,
+                couponCode: true,
                 user: {
                     select: {
                         id: true,

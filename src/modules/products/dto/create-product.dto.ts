@@ -1,8 +1,9 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 import {
     IsEnum,
     IsInt,
+    IsNotEmpty,
     IsNumber,
     IsOptional,
     IsPositive,
@@ -21,7 +22,7 @@ export class CreateProductDto {
     })
     @IsString()
     @MinLength(2)
-    name: string;
+    name!: string;
 
     @ApiProperty({
         example: "Ergonomic wireless mouse with adjustable DPI.",
@@ -30,7 +31,7 @@ export class CreateProductDto {
     })
     @IsString()
     @MinLength(10)
-    description: string;
+    description!: string;
 
     @ApiProperty({
         example: 29.99,
@@ -39,14 +40,14 @@ export class CreateProductDto {
     })
     @IsNumber({ maxDecimalPlaces: 2 })
     @IsPositive()
-    price: number;
+    price!: number;
 
     @ApiProperty({
         example: "cm123abc456def",
         description: "The ID of the category to which the product belongs.",
     })
     @IsString()
-    categoryId: string;
+    categoryId!: string;
 
     @ApiProperty({
         example: 100,
@@ -55,7 +56,7 @@ export class CreateProductDto {
     })
     @IsInt()
     @Min(0)
-    stock: number;
+    stock!: number;
 
     @ApiProperty({
         enum: ProductStatus,
@@ -64,18 +65,18 @@ export class CreateProductDto {
         description: "The current status of the product.",
     })
     @IsEnum(ProductStatus)
-    status: ProductStatus;
+    status!: ProductStatus;
 
-    @IsOptional()
+    @IsNotEmpty()
     @ApiProperty({
         type: "string",
         format: "binary",
         description: "Product thumbnail image.",
     })
-    thumbnail: Express.Multer.File;
+    thumbnail!: Express.Multer.File;
 
     @IsOptional()
-    @ApiProperty({
+    @ApiPropertyOptional({
         type: "array",
         items: {
             type: "string",
@@ -83,5 +84,5 @@ export class CreateProductDto {
         },
         description: "Additional product images.",
     })
-    images: Express.Multer.File[];
+    images?: Express.Multer.File[];
 }
