@@ -1,5 +1,6 @@
 import { ApiPropertyOptional } from "@nestjs/swagger";
 
+import { Type } from "class-transformer";
 import {
     IsDate,
     IsEnum,
@@ -13,11 +14,13 @@ import { CouponStatus } from "src/generated/prisma/enums";
 export class UpdateCouponDto {
     @ApiPropertyOptional({ example: "2026-09-17T00:00:00.000Z" })
     @IsOptional()
+    @Type(() => Date)
     @IsDate()
     startAt?: Date;
 
     @ApiPropertyOptional({ example: "2026-10-17T23:59:59.000Z" })
     @IsOptional()
+    @Type(() => Date)
     @IsDate()
     endAt?: Date;
 

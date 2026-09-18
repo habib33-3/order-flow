@@ -149,6 +149,18 @@ export class CouponService {
         return coupons;
     }
 
+    private validateCouponAvailability(coupon: { startAt: Date; endAt: Date }) {
+        const now = new Date();
+
+        if (now < coupon.startAt) {
+            throw new BadRequestException("Coupon is not active yet");
+        }
+
+        if (now > coupon.endAt) {
+            throw new BadRequestException("Coupon has expired");
+        }
+    }
+
     async getCouponByCode(code: string) {
         const key = couponCacheKeyWithCode(code);
 
@@ -164,6 +176,7 @@ export class CouponService {
         }>(key);
 
         if (cachedCoupon !== null) {
+            this.validateCouponAvailability(cachedCoupon);
             return cachedCoupon;
         }
 
@@ -185,15 +198,7 @@ export class CouponService {
             throw new NotFoundException("Coupon not found");
         }
 
-        const now = new Date();
-
-        if (now < coupon.startAt) {
-            throw new BadRequestException("Coupon is not active yet");
-        }
-
-        if (now > coupon.endAt) {
-            throw new BadRequestException("Coupon has expired");
-        }
+        this.validateCouponAvailability(coupon);
 
         await this.cache.set(key, coupon);
 
@@ -283,14 +288,14 @@ export class CouponService {
             updateData.maxLimitPerUser = payload.maxLimitPerUser;
         }
 
-        await this.prisma.coupon.update({
+        const updatedCoupon = await this.prisma.coupon.update({
             where: { id: coupon.id },
             data: updateData,
         });
 
         await Promise.all([
-            this.cache.set(couponCacheKeyWithCode(coupon.code), coupon),
-            this.cache.set(couponCacheKeyWithId(coupon.id), coupon),
+            this.cache.set(couponCacheKeyWithCode(coupon.code), updatedCoupon),
+            this.cache.set(couponCacheKeyWithId(coupon.id), updatedCoupon),
             this.cache.delete(couponListCache()),
         ]);
     }

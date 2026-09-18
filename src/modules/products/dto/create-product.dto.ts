@@ -1,8 +1,9 @@
-import { ApiProperty } from "@nestjs/swagger";
+import { ApiProperty, ApiPropertyOptional } from "@nestjs/swagger";
 
 import {
     IsEnum,
     IsInt,
+    IsNotEmpty,
     IsNumber,
     IsOptional,
     IsPositive,
@@ -66,7 +67,7 @@ export class CreateProductDto {
     @IsEnum(ProductStatus)
     status!: ProductStatus;
 
-    @IsOptional()
+    @IsNotEmpty()
     @ApiProperty({
         type: "string",
         format: "binary",
@@ -75,7 +76,7 @@ export class CreateProductDto {
     thumbnail!: Express.Multer.File;
 
     @IsOptional()
-    @ApiProperty({
+    @ApiPropertyOptional({
         type: "array",
         items: {
             type: "string",

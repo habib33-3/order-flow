@@ -26,7 +26,7 @@ export class CreateCategoryDto {
     description?: string;
 
     @IsOptional()
-    @ApiProperty({
+    @ApiPropertyOptional({
         type: "string",
         format: "binary",
         description: "Category image",
