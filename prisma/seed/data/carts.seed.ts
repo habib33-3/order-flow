@@ -1,6 +1,5 @@
 /* eslint-disable no-console */
-import { PrismaClient } from "@prisma/client/extension";
-
+import { PrismaClient } from "../../../src/generated/prisma/client";
 import { seedProducts } from "./products.seed";
 
 /**

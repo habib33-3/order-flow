@@ -1,0 +1,33 @@
+model Product {
+    id String @id @default(cuid())
+
+    name        String
+    sku         String   @unique
+    thumbnail   String
+    images      String[]
+    description String   @db.Text
+
+    price Decimal @db.Decimal(10, 2)
+    stock Int     @default(0)
+
+    status ProductStatus @default(DRAFT)
+
+    categoryId String
+
+    category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    orderItems OrderItem[]
+    cartItems  CartItem[]
+
+    @@index([status])
+    @@map("products")
+}
+
+enum ProductStatus {
+    DRAFT
+    ACTIVE
+    ARCHIVED
+}

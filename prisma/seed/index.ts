@@ -1,8 +1,8 @@
 /* eslint-disable no-console */
 import { PrismaPg } from "@prisma/adapter-pg";
-import { PrismaClient } from "@prisma/client/extension";
 import * as argon2 from "argon2";
 
+import { PrismaClient } from "../../src/generated/prisma/client";
 import { seedAdmin } from "./data/admin.seed";
 import { seedCarts } from "./data/carts.seed";
 import { seedCategories } from "./data/categories.seed";
