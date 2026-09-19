@@ -44,6 +44,12 @@ const cleanDatabase = async () => {
     const deletedOrders = await prisma.order.deleteMany();
     console.log(`✅ Deleted ${deletedOrders.count} order(s).`);
 
+    const deletedCouponRedeems = await prisma.couponRedeem.deleteMany();
+    console.log(`✅ Deleted ${deletedCouponRedeems.count} coupon redeem(s).`);
+
+    const deletedCoupons = await prisma.coupon.deleteMany();
+    console.log(`✅ Deleted ${deletedCoupons.count} coupon(s).`);
+
     const deletedShippingAddresses = await prisma.shippingAddress.deleteMany();
 
     console.log(
@@ -78,7 +84,7 @@ const seedAdmin = async (password: string) => {
         },
     });
 
-    console.log(`✅ Admin created successfully: ${admin.email}`);
+    console.log(`✅ Admin created: ${admin.email}`);
 
     return admin;
 };
@@ -99,7 +105,7 @@ const seedUser = async (password: string) => {
         },
     });
 
-    console.log(`✅ User created successfully: ${user.email}`);
+    console.log(`✅ User created: ${user.email}`);
 
     return user;
 };
@@ -134,6 +140,15 @@ const seedShippingAddresses = async (userId: string) => {
     });
 
     console.log(`✅ Created ${result.count} shipping address(es).`);
+
+    return prisma.shippingAddress.findMany({
+        where: {
+            userId,
+        },
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
 };
 
 /**
@@ -246,25 +261,21 @@ const seedCart = async (
         throw new Error("At least 3 products are required to seed cart.");
     }
 
-    const product1 = products[0];
-    const product2 = products[1];
-    const product3 = products[2];
-
     const cart = await prisma.cart.create({
         data: {
             userId,
             cartItems: {
                 create: [
                     {
-                        productId: product1.id,
+                        productId: products[0].id,
                         quantity: 2,
                     },
                     {
-                        productId: product2.id,
+                        productId: products[1].id,
                         quantity: 1,
                     },
                     {
-                        productId: product3.id,
+                        productId: products[2].id,
                         quantity: 3,
                     },
                 ],
@@ -280,6 +291,218 @@ const seedCart = async (
     );
 
     return cart;
+};
+
+/**
+ * Seed coupons
+ */
+const seedCoupons = async () => {
+    console.log("🎟️ Creating coupons...");
+
+    const now = new Date();
+
+    const coupons = [
+        {
+            code: "WELCOME10",
+            type: "PERCENTAGE" as const,
+            discount: 10,
+            startAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+            endAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+            minimumOrderAmount: 20,
+            maximumDiscountAmount: 50,
+            status: "ACTIVE" as const,
+            maxLimit: 100,
+            remainingLimit: 100,
+            maxLimitPerUser: 1,
+        },
+        {
+            code: "SAVE20",
+            type: "FIXED" as const,
+            discount: 20,
+            startAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+            endAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+            minimumOrderAmount: 50,
+            maximumDiscountAmount: null,
+            status: "ACTIVE" as const,
+            maxLimit: 50,
+            remainingLimit: 50,
+            maxLimitPerUser: 1,
+        },
+        {
+            code: "BIGSALE25",
+            type: "PERCENTAGE" as const,
+            discount: 25,
+            startAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+            endAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+            minimumOrderAmount: 100,
+            maximumDiscountAmount: 100,
+            status: "ACTIVE" as const,
+            maxLimit: 25,
+            remainingLimit: 25,
+            maxLimitPerUser: 2,
+        },
+        {
+            code: "INACTIVE10",
+            type: "PERCENTAGE" as const,
+            discount: 10,
+            startAt: new Date(now.getTime() - 24 * 60 * 60 * 1000),
+            endAt: new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000),
+            minimumOrderAmount: null,
+            maximumDiscountAmount: null,
+            status: "INACTIVE" as const,
+            maxLimit: 100,
+            remainingLimit: 100,
+            maxLimitPerUser: 1,
+        },
+    ];
+
+    const result = await prisma.coupon.createMany({
+        data: coupons,
+    });
+
+    console.log(`✅ Created ${result.count} coupon(s).`);
+
+    return prisma.coupon.findMany({
+        orderBy: {
+            createdAt: "asc",
+        },
+    });
+};
+
+/**
+ * Seed coupon redemption
+ */
+const seedCouponRedeem = async (userId: string, couponId: string) => {
+    console.log("🎟️ Creating coupon redemption...");
+
+    const redeem = await prisma.couponRedeem.create({
+        data: {
+            userId,
+            couponId,
+        },
+    });
+
+    console.log(`✅ Created coupon redemption: ${redeem.id}`);
+
+    return redeem;
+};
+
+/**
+ * Seed order
+ */
+const seedOrder = async (
+    userId: string,
+    shippingAddress: string,
+    products: Awaited<ReturnType<typeof seedProducts>>,
+    couponId?: string
+) => {
+    console.log("📦 Creating order...");
+
+    const product1 = products[0];
+    const product2 = products[1];
+
+    const quantity1 = 2;
+    const quantity2 = 1;
+
+    const subtotal =
+        Number(product1.price) * quantity1 + Number(product2.price) * quantity2;
+
+    let discount = 0;
+
+    if (couponId) {
+        const coupon = await prisma.coupon.findUnique({
+            where: {
+                id: couponId,
+            },
+        });
+
+        if (!coupon) {
+            throw new Error("Coupon not found.");
+        }
+
+        if (coupon.type === "PERCENTAGE") {
+            discount = subtotal * (Number(coupon.discount) / 100);
+
+            if (coupon.maximumDiscountAmount !== null) {
+                discount = Math.min(
+                    discount,
+                    Number(coupon.maximumDiscountAmount)
+                );
+            }
+        } else {
+            discount = Number(coupon.discount);
+        }
+
+        discount = Math.min(discount, subtotal);
+    }
+
+    const total = subtotal - discount;
+
+    const order = await prisma.order.create({
+        data: {
+            userId,
+            shippingAddress,
+            total,
+            status: "CONFIRMED",
+            note: "Seeded development order.",
+            couponId,
+            paidAt: new Date(),
+            items: {
+                create: [
+                    {
+                        productId: product1.id,
+                        quantity: quantity1,
+                        unitPrice: product1.price,
+                        subtotal: Number(product1.price) * quantity1,
+                    },
+                    {
+                        productId: product2.id,
+                        quantity: quantity2,
+                        unitPrice: product2.price,
+                        subtotal: Number(product2.price) * quantity2,
+                    },
+                ],
+            },
+        },
+        include: {
+            items: true,
+        },
+    });
+
+    console.log(
+        `✅ Created order ${order.id} — subtotal: ${subtotal}, discount: ${discount}, total: ${total}`
+    );
+
+    return {
+        order,
+        subtotal,
+        discount,
+        total,
+    };
+};
+
+/**
+ * Seed payment
+ */
+const seedPayment = async (userId: string, orderId: string, amount: number) => {
+    console.log("💳 Creating payment...");
+
+    const payment = await prisma.payment.create({
+        data: {
+            amount,
+            status: "PAID",
+            provider: "STRIPE",
+            currency: "USD",
+            idempotencyKey: `seed-${orderId}`,
+            transactionId: `txn_seed_${orderId}`,
+            orderId,
+            userId,
+        },
+    });
+
+    console.log(`✅ Created payment ${payment.id}.`);
+
+    return payment;
 };
 
 const main = async () => {
@@ -314,7 +537,11 @@ const main = async () => {
 
     console.log("\n📍 Seeding shipping addresses...");
 
-    await seedShippingAddresses(user.id);
+    const shippingAddresses = await seedShippingAddresses(user.id);
+
+    if (shippingAddresses.length === 0) {
+        throw new Error("No shipping addresses were created.");
+    }
 
     // --------------------------------------------------
     // Categories
@@ -324,8 +551,8 @@ const main = async () => {
 
     const categories = await seedCategories();
 
-    if (categories.length === 0) {
-        throw new Error("No categories were created.");
+    if (categories.length < 2) {
+        throw new Error("At least 2 categories are required.");
     }
 
     // --------------------------------------------------
@@ -336,6 +563,10 @@ const main = async () => {
 
     const products = await seedProducts(categories[0].id);
 
+    if (products.length < 3) {
+        throw new Error("At least 3 products are required.");
+    }
+
     // --------------------------------------------------
     // Cart
     // --------------------------------------------------
@@ -343,6 +574,51 @@ const main = async () => {
     console.log("\n🛍️ Seeding cart...");
 
     await seedCart(user.id, products);
+
+    // --------------------------------------------------
+    // Coupons
+    // --------------------------------------------------
+
+    console.log("\n🎟️ Seeding coupons...");
+
+    const coupons = await seedCoupons();
+
+    const welcomeCoupon = coupons.find((coupon) => coupon.code === "WELCOME10");
+
+    if (!welcomeCoupon) {
+        throw new Error("WELCOME10 coupon was not created.");
+    }
+
+    // --------------------------------------------------
+    // Coupon redemption
+    // --------------------------------------------------
+
+    console.log("\n🎟️ Seeding coupon redemption...");
+
+    await seedCouponRedeem(user.id, welcomeCoupon.id);
+
+    // --------------------------------------------------
+    // Order
+    // --------------------------------------------------
+
+    console.log("\n📦 Seeding order...");
+
+    const shippingAddress = shippingAddresses[0];
+
+    const seededOrder = await seedOrder(
+        user.id,
+        `${shippingAddress.address}, ${shippingAddress.city}, ${shippingAddress.state}, ${shippingAddress.postalCode}, ${shippingAddress.country}`,
+        products,
+        welcomeCoupon.id
+    );
+
+    // --------------------------------------------------
+    // Payment
+    // --------------------------------------------------
+
+    console.log("\n💳 Seeding payment...");
+
+    await seedPayment(user.id, seededOrder.order.id, seededOrder.total);
 
     // --------------------------------------------------
     // Done
@@ -354,6 +630,17 @@ const main = async () => {
     console.log(`Admin: ${admin.email}`);
     console.log(`User: ${user.email}`);
     console.log(`Password: ${plainPassword}`);
+
+    console.log("\n📊 Seed summary:");
+    console.log(`Users: 2`);
+    console.log(`Categories: ${categories.length}`);
+    console.log(`Products: ${products.length}`);
+    console.log(`Shipping addresses: ${shippingAddresses.length}`);
+    console.log(`Coupons: ${coupons.length}`);
+    console.log(`Coupon redemptions: 1`);
+    console.log(`Orders: 1`);
+    console.log(`Order items: ${seededOrder.order.items.length}`);
+    console.log(`Payments: 1`);
 };
 
 main()
