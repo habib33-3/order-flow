@@ -125,3 +125,10 @@ export const couponRedemptionsCacheKey = (
 
 export const couponDistributionByTypeCacheKey = (year: number) =>
     withPrefix("coupon", "distribution-by-type", year);
+
+// platform review
+export const platformReviewCacheKeyWithUserId = (userId: string) =>
+    withPrefix("review", "platform", "userId", userId);
+
+export const platformReviewCacheKeyWithReviewId = (reviewId: string) =>
+    withPrefix("review", "platform", "reviewId", reviewId);

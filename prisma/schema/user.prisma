@@ -19,6 +19,7 @@ model User {
     shippingAddresses ShippingAddress[]
     carts             Cart[]
     couponRedeems     CouponRedeem[]
+    platformReviews   PlatformReview[]
 
     @@index([role])
     @@map("users")
