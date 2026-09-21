@@ -1,4 +1,5 @@
 import { CouponStatus, ProductStatus } from "src/generated/prisma/enums";
+import { ReviewQualityType } from "src/modules/review/platform-review/constants";
 
 import { env } from "../env/env";
 
@@ -132,3 +133,27 @@ export const platformReviewCacheKeyWithUserId = (userId: string) =>
 
 export const platformReviewCacheKeyWithReviewId = (reviewId: string) =>
     withPrefix("review", "platform", "reviewId", reviewId);
+
+export const platformReviewUserCacheKey = () =>
+    withPrefix("review", "user", "latest-good");
+
+export const platformReviewAdminListCacheKey = (
+    cursor?: string,
+    limit = 20,
+    search?: string,
+    sortBy: "createdAt" | "rating" | "userId" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    rating?: number,
+    quality?: ReviewQualityType
+) =>
+    withPrefix(
+        "review",
+        "admin-list",
+        cursor,
+        limit,
+        search,
+        sortBy,
+        sort,
+        rating,
+        quality
+    );
