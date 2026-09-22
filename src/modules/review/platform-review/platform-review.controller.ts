@@ -2,11 +2,13 @@ import {
     Body,
     Controller,
     DefaultValuePipe,
+    Delete,
     Get,
     HttpStatus,
     Param,
     ParseEnumPipe,
     ParseIntPipe,
+    Patch,
     Post,
     Query,
 } from "@nestjs/common";
@@ -15,9 +17,11 @@ import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { Public } from "src/common/decorators/public.decorator";
 import { AdminGuard } from "src/common/guards/admin.guard";
+import { type JwtPayload } from "src/types/types";
 
 import { ReviewQuality, type ReviewQualityType } from "./constants";
 import { CreatePlatformReviewDto } from "./dto/create-platform-review.dto";
+import { UpdateReviewDto } from "./dto/update-review.dto";
 import { PlatformReviewService } from "./platform-review.service";
 
 @Controller("review/platform")
@@ -116,6 +120,16 @@ export class PlatformReviewController {
         return this.platformReviewService.getPublicPlatformReviews();
     }
 
+    @Get("me")
+    @ApiOperation({
+        summary: "Get the authenticated user's platform review",
+        description:
+            "Retrieve the platform review submitted by the currently authenticated user.",
+    })
+    async getPlatformReviewByUserId(@CurrentUser("sub") userId: string) {
+        return this.platformReviewService.getPlatformReviewByUserId(userId);
+    }
+
     @Get(":reviewId")
     @ApiOperation({
         summary: "Get a platform review by ID",
@@ -128,5 +142,36 @@ export class PlatformReviewController {
     })
     async getPlatformReview(@Param("reviewId") reviewId: string) {
         return this.platformReviewService.getPlatformReview(reviewId);
+    }
+
+    @Patch()
+    @ApiOperation({
+        summary: "Update the authenticated user's platform review",
+        description:
+            "Update the platform review belonging to the currently authenticated user.",
+    })
+    async updatePlatformReview(
+        @Body() payload: UpdateReviewDto,
+        @CurrentUser("sub") userId: string
+    ) {
+        return this.platformReviewService.updateReview(userId, payload);
+    }
+
+    @Delete(":id")
+    @ApiOperation({
+        summary: "Delete a platform review",
+        description:
+            "Delete a platform review by ID. The review owner can delete their own review, while an admin can delete any review.",
+    })
+    @ApiParam({
+        name: "id",
+        description: "Unique ID of the platform review",
+        type: String,
+    })
+    async deletePlatformReview(
+        @CurrentUser() user: JwtPayload,
+        @Param("id") id: string
+    ) {
+        return this.platformReviewService.deletePlatformReview(user, id);
     }
 }

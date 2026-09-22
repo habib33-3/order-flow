@@ -1,4 +1,9 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import {
+    BadRequestException,
+    ForbiddenException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
@@ -8,10 +13,12 @@ import {
     platformReviewUserCacheKey,
 } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
-import { Prisma } from "src/generated/prisma/client";
+import { PlatformReview, Prisma } from "src/generated/prisma/client";
+import { JwtPayload } from "src/types/types";
 
 import { ReviewQualityType } from "./constants";
 import { CreatePlatformReviewDto } from "./dto/create-platform-review.dto";
+import { UpdateReviewDto } from "./dto/update-review.dto";
 
 @Injectable()
 export class PlatformReviewService {
@@ -182,7 +189,19 @@ export class PlatformReviewService {
     async getPlatformReview(reviewId: string) {
         const cacheKey = platformReviewCacheKeyWithReviewId(reviewId);
 
-        const cachedReview = await this.cache.get(cacheKey);
+        const cachedReview = await this.cache.get<
+            Prisma.PlatformReviewGetPayload<{
+                include: {
+                    user: {
+                        select: {
+                            id: true;
+                            email: true;
+                            avatarUrl: true;
+                        };
+                    };
+                };
+            }>
+        >(cacheKey);
 
         if (cachedReview !== null) {
             return cachedReview;
@@ -196,6 +215,7 @@ export class PlatformReviewService {
                 id: true,
                 rating: true,
                 review: true,
+                userId: true,
                 user: {
                     select: {
                         id: true,
@@ -213,5 +233,88 @@ export class PlatformReviewService {
         await this.cache.set(cacheKey, review);
 
         return review;
+    }
+
+    async getPlatformReviewByUserId(userId: string) {
+        const cacheKey = platformReviewCacheKeyWithUserId(userId);
+
+        const cachedReview = await this.cache.get<PlatformReview>(cacheKey);
+
+        if (cachedReview !== null) {
+            return cachedReview;
+        }
+
+        const review = await this.prisma.platformReview.findUnique({
+            where: { userId },
+        });
+
+        if (!review) {
+            throw new NotFoundException("No review found");
+        }
+
+        await this.cache.set(cacheKey, review);
+
+        return review;
+    }
+
+    async updateReview(userId: string, payload: UpdateReviewDto) {
+        const review = await this.getPlatformReviewByUserId(userId);
+
+        const updateReview = await this.prisma.platformReview.update({
+            where: {
+                id: review.id,
+            },
+            data: {
+                ...(payload.rating !== undefined && {
+                    rating: payload.rating,
+                }),
+                ...(payload.review !== undefined && {
+                    review: payload.review,
+                }),
+            },
+        });
+
+        await Promise.all([
+            this.cache.set(
+                platformReviewCacheKeyWithUserId(userId),
+                updateReview
+            ),
+            this.cache.set(
+                platformReviewCacheKeyWithReviewId(review.id),
+                updateReview
+            ),
+            this.cache.delete(platformReviewAdminListCacheKey()),
+        ]);
+
+        return updateReview;
+    }
+
+    async deletePlatformReview(user: JwtPayload, id: string) {
+        const review = await this.getPlatformReview(id);
+
+        const isAdmin = user.role === "ADMIN";
+        const isOwner = review.userId === user.sub;
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException(
+                "You are not authorized to delete this review"
+            );
+        }
+
+        await this.prisma.platformReview.delete({
+            where: {
+                id: review.id,
+            },
+        });
+
+        await Promise.all([
+            this.cache.delete(platformReviewCacheKeyWithUserId(review.userId)),
+            this.cache.delete(platformReviewCacheKeyWithReviewId(review.id)),
+            this.cache.delete(platformReviewAdminListCacheKey()),
+        ]);
+
+        return {
+            message: "Review deleted successfully",
+        };
     }
 }

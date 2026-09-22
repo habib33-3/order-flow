@@ -60,7 +60,7 @@ const typescript = {
         "@typescript-eslint/await-thenable": "error",
         "@typescript-eslint/consistent-type-definitions": ["warn", "type"],
         "@typescript-eslint/explicit-module-boundary-types": "off",
-
+        "no-undef": "error",
         "@typescript-eslint/no-explicit-any": "error",
         "@typescript-eslint/no-floating-promises": "error",
         "@typescript-eslint/no-misused-promises": [
