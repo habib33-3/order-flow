@@ -1,5 +1,5 @@
 import { CouponStatus, ProductStatus } from "src/generated/prisma/enums";
-import { ReviewQualityType } from "src/modules/review/platform-review/constants";
+import { ReviewQualityType } from "src/modules/review/platform-review/platform-review/constants";
 
 import { env } from "../env/env";
 

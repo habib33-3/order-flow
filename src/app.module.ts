@@ -22,7 +22,8 @@ import { CouponModule } from "./modules/coupon/coupon/coupon.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
-import { PlatformReviewModule } from "./modules/review/platform-review/platform-review.module";
+import { PlatformReviewAnalyticsModule } from "./modules/review/platform-review/platform-review-analytics/platform-review-analytics.module";
+import { PlatformReviewModule } from "./modules/review/platform-review/platform-review/platform-review.module";
 import { ShippingAddressModule } from "./modules/shipping-address/shipping-address.module";
 import { UserModule } from "./modules/user/user.module";
 
@@ -58,6 +59,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         CouponModule,
         CouponAnalyticsModule,
         PlatformReviewModule,
+        PlatformReviewAnalyticsModule,
     ],
     controllers: [AppController],
     providers: [
