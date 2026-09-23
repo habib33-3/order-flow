@@ -3,7 +3,7 @@ import { ReviewQualityType } from "src/modules/review/platform-review/platform-r
 
 import { env } from "../env/env";
 
-const withPrefix = (...parts: (string | number | undefined | null)[]) =>
+const withPrefix = (...parts: (string | number | Date | undefined | null)[]) =>
     `${env.APP_NAME}-cache:${parts
         .filter((part) => part !== undefined && part !== null && part !== "")
         .join(":")}`;
@@ -157,3 +157,14 @@ export const platformReviewAdminListCacheKey = (
         rating,
         quality
     );
+
+export const platformReviewSummaryCacheKey = (
+    startDate?: Date,
+    endDate?: Date
+) => withPrefix("review", "platform", "summary", startDate, endDate);
+
+export const platformReviewTrendCacheKey = (
+    startDate?: Date,
+    endDate?: Date,
+    interval: "month" | "year" = "month"
+) => withPrefix("review", "platform", "trend", startDate, endDate, interval);

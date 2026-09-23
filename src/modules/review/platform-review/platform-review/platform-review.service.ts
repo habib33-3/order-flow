@@ -16,6 +16,7 @@ import { RedisService } from "src/common/redis/redis.service";
 import { PlatformReview, Prisma } from "src/generated/prisma/client";
 import { JwtPayload } from "src/types/types";
 
+import { PlatformReviewAnalyticsService } from "../platform-review-analytics/platform-review-analytics.service";
 import { ReviewQualityType } from "./constants";
 import { CreatePlatformReviewDto } from "./dto/create-platform-review.dto";
 import { UpdateReviewDto } from "./dto/update-review.dto";
@@ -24,7 +25,8 @@ import { UpdateReviewDto } from "./dto/update-review.dto";
 export class PlatformReviewService {
     constructor(
         private readonly prisma: PrismaService,
-        private readonly cache: RedisService
+        private readonly cache: RedisService,
+        private readonly analyticsService: PlatformReviewAnalyticsService
     ) {}
 
     async addPlatformReview(payload: CreatePlatformReviewDto, userId: string) {
@@ -46,6 +48,8 @@ export class PlatformReviewService {
                     platformReviewCacheKeyWithReviewId(review.id),
                     review
                 ),
+
+                this.analyticsService.invalidatePlatformReviewAnalyticsCache(),
             ]);
 
             return review;
@@ -284,6 +288,7 @@ export class PlatformReviewService {
                 updateReview
             ),
             this.cache.delete(platformReviewAdminListCacheKey()),
+            this.analyticsService.invalidatePlatformReviewAnalyticsCache(),
         ]);
 
         return updateReview;
@@ -311,6 +316,7 @@ export class PlatformReviewService {
             this.cache.delete(platformReviewCacheKeyWithUserId(review.userId)),
             this.cache.delete(platformReviewCacheKeyWithReviewId(review.id)),
             this.cache.delete(platformReviewAdminListCacheKey()),
+            this.analyticsService.invalidatePlatformReviewAnalyticsCache(),
         ]);
 
         return {
