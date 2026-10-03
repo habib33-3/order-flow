@@ -26,6 +26,7 @@ import { PlatformReviewAnalyticsModule } from "./modules/review/platform-review/
 import { PlatformReviewModule } from "./modules/review/platform-review/platform-review/platform-review.module";
 import { ShippingAddressModule } from "./modules/shipping-address/shipping-address.module";
 import { UserModule } from "./modules/user/user.module";
+import { ProductReviewModule } from "./product-review/product-review.module";
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -60,6 +61,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         CouponAnalyticsModule,
         PlatformReviewModule,
         PlatformReviewAnalyticsModule,
+        ProductReviewModule,
     ],
     controllers: [AppController],
     providers: [

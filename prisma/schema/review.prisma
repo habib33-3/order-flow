@@ -12,3 +12,23 @@ model PlatformReview {
 
     @@map("platform_reviews")
 }
+
+model ProductReview {
+    id String @id @default(cuid())
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    productId String
+    product   Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+    rating Int
+    review String
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([userId, productId])
+    @@index([productId])
+    @@map("product_reviews")
+}

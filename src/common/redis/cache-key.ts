@@ -168,3 +168,51 @@ export const platformReviewTrendCacheKey = (
     endDate?: Date,
     interval: "month" | "year" = "month"
 ) => withPrefix("review", "platform", "trend", startDate, endDate, interval);
+
+// product review
+
+export const productReviewCacheKeyWithId = (id: string) =>
+    withPrefix("product-review", "id", id);
+
+export const productReviewListCacheKey = (
+    productId: string,
+    cursor?: string,
+    limit = 20,
+    search?: string,
+    sortBy: "createdAt" | "rating" | "userId" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    rating?: number
+) =>
+    withPrefix(
+        "product-review",
+        "list",
+        productId,
+        cursor,
+        limit,
+        search,
+        sortBy,
+        sort,
+        rating
+    );
+
+export const productReviewListCacheKeyWithUserId = (
+    userId: string,
+    cursor?: string,
+    limit = 20,
+    search?: string,
+    sortBy: "createdAt" | "rating" | "userId" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    rating?: number
+) =>
+    withPrefix(
+        "product-review",
+        "list",
+        "userId",
+        userId,
+        cursor,
+        limit,
+        search,
+        sortBy,
+        sort,
+        rating
+    );

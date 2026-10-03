@@ -20,6 +20,7 @@ model User {
     carts             Cart[]
     couponRedeems     CouponRedeem[]
     platformReviews   PlatformReview[]
+    productReviews    ProductReview[]
 
     @@index([role])
     @@map("users")
