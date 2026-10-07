@@ -1,9 +1,11 @@
 import {
     Body,
     Controller,
+    Delete,
     Get,
     Param,
     ParseIntPipe,
+    Patch,
     Post,
     Query,
 } from "@nestjs/common";
@@ -11,8 +13,10 @@ import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AdminGuard } from "src/common/guards/admin.guard";
+import { type JwtPayload } from "src/types/types";
 
 import { AddProductReviewDto } from "./dto/add-product-review.dto";
+import { UpdateProductReviewDto } from "./dto/update-product-review.dto";
 import { ProductReviewService } from "./product-review.service";
 
 @Controller("product-review")
@@ -332,5 +336,46 @@ export class ProductReviewController {
     })
     async getProductReview(@Param("id") id: string) {
         return this.productReviewService.getSingleProductReview(id);
+    }
+
+    @Patch(":id")
+    @ApiOperation({
+        summary: "Update the authenticated user's product review",
+        description:
+            "Update the product review belonging to the currently authenticated user.",
+    })
+    @ApiParam({
+        name: "id",
+        description: "Product review UUID",
+        example: "550e8400-e29b-41d4-a716-446655440000",
+    })
+    async updateProductReview(
+        @Param("id") id: string,
+        @Body() payload: UpdateProductReviewDto,
+        @CurrentUser("sub") userId: string
+    ) {
+        return this.productReviewService.updateProductReview(
+            userId,
+            id,
+            payload
+        );
+    }
+
+    @Delete(":id")
+    @ApiOperation({
+        summary: "Delete a product review",
+        description:
+            "Delete a product review by ID. The review owner can delete their own review, while an admin can delete any review.",
+    })
+    @ApiParam({
+        name: "id",
+        description: "Unique ID of the product review",
+        type: String,
+    })
+    async deleteProductReview(
+        @CurrentUser() user: JwtPayload,
+        @Param("id") id: string
+    ) {
+        return this.productReviewService.deleteProductReview(user, id);
     }
 }

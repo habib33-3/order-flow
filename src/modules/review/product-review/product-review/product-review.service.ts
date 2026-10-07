@@ -1,5 +1,6 @@
 import {
     BadRequestException,
+    ForbiddenException,
     Injectable,
     NotFoundException,
 } from "@nestjs/common";
@@ -13,6 +14,9 @@ import {
 import { RedisService } from "src/common/redis/redis.service";
 import { Prisma } from "src/generated/prisma/client";
 import { ProductsService } from "src/modules/products/products.service";
+import { JwtPayload } from "src/types/types";
+
+import { UpdateProductReviewDto } from "./dto/update-product-review.dto";
 
 @Injectable()
 export class ProductReviewService {
@@ -308,5 +312,74 @@ export class ProductReviewService {
         await this.cache.set(key, productReview);
 
         return productReview;
+    }
+
+    async updateProductReview(
+        userId: string,
+        reviewId: string,
+        payload: UpdateProductReviewDto
+    ) {
+        const productReview = await this.getSingleProductReview(reviewId);
+
+        if (productReview.user.id !== userId) {
+            throw new ForbiddenException(
+                "You can only update your own reviews"
+            );
+        }
+
+        const updateReview = await this.prisma.productReview.update({
+            where: {
+                id: reviewId,
+            },
+            data: {
+                ...(payload.rating !== undefined && {
+                    rating: payload.rating,
+                }),
+                ...(payload.review !== undefined && {
+                    review: payload.review,
+                }),
+            },
+        });
+
+        await Promise.all([
+            this.cache.delete(productReviewCacheKeyWithId(reviewId)),
+            this.cache.delete(
+                productReviewListCacheKey(productReview.product.id)
+            ),
+            this.cache.delete(productReviewListCacheKeyWithUserId(userId)),
+        ]);
+
+        return updateReview;
+    }
+
+    async deleteProductReview(user: JwtPayload, id: string) {
+        const review = await this.getSingleProductReview(id);
+
+        const isAdmin = user.role === "ADMIN";
+        const isOwner = review.user.id === user.sub;
+
+        if (!isAdmin && !isOwner) {
+            throw new ForbiddenException(
+                "You are not authorized to delete this review"
+            );
+        }
+
+        await this.prisma.productReview.delete({
+            where: {
+                id: review.id,
+            },
+        });
+
+        await Promise.all([
+            this.cache.delete(productReviewCacheKeyWithId(id)),
+            this.cache.delete(productReviewListCacheKey(review.product.id)),
+            this.cache.delete(
+                productReviewListCacheKeyWithUserId(review.user.id)
+            ),
+        ]);
+
+        return {
+            message: "Review deleted successfully",
+        };
     }
 }
