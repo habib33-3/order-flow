@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable } from "@nestjs/common";
+import {
+    BadRequestException,
+    Injectable,
+    NotFoundException,
+} from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
@@ -7,6 +11,7 @@ import {
     productReviewListCacheKeyWithUserId,
 } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
+import { Prisma } from "src/generated/prisma/client";
 import { ProductsService } from "src/modules/products/products.service";
 
 @Injectable()
@@ -56,6 +61,251 @@ export class ProductReviewService {
             this.cache.delete(productReviewListCacheKey(productId)),
             this.cache.delete(productReviewListCacheKeyWithUserId(userId)),
         ]);
+
+        return productReview;
+    }
+
+    async getProductReviews(
+        productId: string,
+        cursor?: string,
+        limit = 20,
+        search?: string,
+        sortBy: "createdAt" | "rating" | "userId" = "createdAt",
+        sort: "asc" | "desc" = "desc",
+        rating?: number
+    ) {
+        limit = Math.min(limit, 50);
+
+        const normalizedSearch = search?.trim();
+
+        const cacheKey = productReviewListCacheKey(
+            productId,
+            cursor,
+            limit,
+            normalizedSearch,
+            sortBy,
+            sort,
+            rating
+        );
+
+        const cached = await this.cache.get(cacheKey);
+
+        if (cached !== null) {
+            return cached;
+        }
+
+        const where: Prisma.ProductReviewWhereInput = {
+            productId,
+        };
+
+        if (normalizedSearch) {
+            where.review = {
+                contains: normalizedSearch,
+                mode: "insensitive",
+            };
+        }
+
+        if (rating !== undefined) {
+            where.rating = rating;
+        }
+
+        const [averageRating, totalReviews, reviews] = await Promise.all([
+            this.prisma.productReview.aggregate({
+                where: { productId },
+                _avg: { rating: true },
+            }),
+
+            this.prisma.productReview.count({
+                where: { productId },
+            }),
+
+            this.prisma.productReview.findMany({
+                where,
+                take: limit + 1,
+                ...(cursor && {
+                    cursor: {
+                        id: cursor,
+                    },
+                    skip: 1,
+                }),
+                orderBy: {
+                    id: sort,
+                },
+                include: {
+                    user: {
+                        select: {
+                            id: true,
+                            name: true,
+                        },
+                    },
+                },
+            }),
+        ]);
+
+        const hasNextPage = reviews.length > limit;
+        const pageReviews = reviews.slice(0, limit);
+
+        const result = {
+            reviews: pageReviews,
+            averageRating: averageRating._avg.rating ?? 0,
+            totalReviews,
+            nextCursor: hasNextPage ? pageReviews.at(-1)?.id : undefined,
+        };
+
+        await this.cache.set(cacheKey, result);
+
+        return result;
+    }
+
+    async getProductReviewsByUserId(
+        userId: string,
+        cursor?: string,
+        limit = 20,
+        search?: string,
+        sortBy: "createdAt" | "rating" | "userId" = "createdAt",
+        sort: "asc" | "desc" = "desc",
+        rating?: number
+    ) {
+        limit = Math.min(limit, 50);
+
+        const cacheKey = productReviewListCacheKeyWithUserId(
+            userId,
+            cursor,
+            limit,
+            search,
+            sortBy,
+            sort,
+            rating
+        );
+
+        const cached = await this.cache.get(cacheKey);
+
+        if (cached !== null) {
+            return cached;
+        }
+
+        const where: Prisma.ProductReviewWhereInput = {
+            userId,
+        };
+
+        if (search) {
+            search = search.trim();
+
+            where.review = {
+                contains: search,
+                mode: "insensitive",
+            };
+        }
+
+        if (rating) {
+            where.rating = rating;
+        }
+
+        const totalReviews = await this.prisma.productReview.count({
+            where,
+        });
+
+        const productReviews = await this.prisma.productReview.findMany({
+            where,
+            take: limit + 1,
+            ...(cursor && {
+                cursor: {
+                    id: cursor,
+                },
+                skip: 1,
+            }),
+            orderBy: {
+                [sortBy]: sort,
+            },
+            include: {
+                product: {
+                    select: {
+                        id: true,
+                        name: true,
+                    },
+                },
+            },
+        });
+
+        const hasNextPage = productReviews.length > limit;
+        const pageReviews = productReviews.slice(0, limit);
+
+        const result = {
+            reviews: pageReviews,
+            totalReviews,
+            nextCursor: hasNextPage ? pageReviews.at(-1)?.id : undefined,
+        };
+
+        await this.cache.set(cacheKey, result);
+
+        return result;
+    }
+
+    async getSingleProductReview(id: string) {
+        const key = productReviewCacheKeyWithId(id);
+
+        const cached = await this.cache.get<
+            Prisma.ProductReviewGetPayload<{
+                select: {
+                    id: true;
+                    rating: true;
+                    review: true;
+                    createdAt: true;
+                    updatedAt: true;
+                    user: {
+                        select: {
+                            id: true;
+                            name: true;
+                            avatarUrl: true;
+                        };
+                    };
+                    product: {
+                        select: {
+                            id: true;
+                            name: true;
+                            thumbnail: true;
+                        };
+                    };
+                };
+            }>
+        >(key);
+
+        if (cached !== null) {
+            return cached;
+        }
+
+        const productReview = await this.prisma.productReview.findUnique({
+            where: {
+                id,
+            },
+            select: {
+                id: true,
+                rating: true,
+                review: true,
+                createdAt: true,
+                updatedAt: true,
+                user: {
+                    select: {
+                        id: true,
+                        name: true,
+                        avatarUrl: true,
+                    },
+                },
+                product: {
+                    select: {
+                        id: true,
+                        name: true,
+                        thumbnail: true,
+                    },
+                },
+            },
+        });
+
+        if (!productReview) {
+            throw new NotFoundException("Product review not found");
+        }
+
+        await this.cache.set(key, productReview);
 
         return productReview;
     }
