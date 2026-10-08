@@ -216,3 +216,26 @@ export const productReviewListCacheKeyWithUserId = (
         sort,
         rating
     );
+
+// product review analytics
+
+export const productReviewSummaryCacheKey = (
+    id: string,
+    startDate?: Date,
+    endDate?: Date
+) => withPrefix("product-review", "summary", id, startDate, endDate);
+
+export const productReviewTrendCacheKey = (
+    productId: string,
+    startDate?: Date,
+    endDate?: Date,
+    interval: "month" | "year" = "month"
+) =>
+    withPrefix(
+        "product-review",
+        "trend",
+        productId,
+        startDate,
+        endDate,
+        interval
+    );

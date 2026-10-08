@@ -24,9 +24,10 @@ import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
 import { PlatformReviewAnalyticsModule } from "./modules/review/platform-review/platform-review-analytics/platform-review-analytics.module";
 import { PlatformReviewModule } from "./modules/review/platform-review/platform-review/platform-review.module";
+import { ProductReviewAnalyticsModule } from "./modules/review/product-review/product-review-analytics/product-review-analytics.module";
+import { ProductReviewModule } from "./modules/review/product-review/product-review/product-review.module";
 import { ShippingAddressModule } from "./modules/shipping-address/shipping-address.module";
 import { UserModule } from "./modules/user/user.module";
-import { ProductReviewModule } from "./product-review/product-review.module";
 
 export const { ObserveModule, ObserveInstrument } = createObserveModule();
 
@@ -62,6 +63,7 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         PlatformReviewModule,
         PlatformReviewAnalyticsModule,
         ProductReviewModule,
+        ProductReviewAnalyticsModule,
     ],
     controllers: [AppController],
     providers: [

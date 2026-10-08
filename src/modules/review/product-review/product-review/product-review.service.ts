@@ -16,6 +16,7 @@ import { Prisma } from "src/generated/prisma/client";
 import { ProductsService } from "src/modules/products/products.service";
 import { JwtPayload } from "src/types/types";
 
+import { ProductReviewAnalyticsService } from "../product-review-analytics/product-review-analytics.service";
 import { UpdateProductReviewDto } from "./dto/update-product-review.dto";
 
 @Injectable()
@@ -23,7 +24,8 @@ export class ProductReviewService {
     constructor(
         private readonly prisma: PrismaService,
         private readonly productService: ProductsService,
-        private readonly cache: RedisService
+        private readonly cache: RedisService,
+        private readonly productReviewAnalyticsService: ProductReviewAnalyticsService
     ) {}
 
     async addProductReview(
@@ -64,6 +66,9 @@ export class ProductReviewService {
             ),
             this.cache.delete(productReviewListCacheKey(productId)),
             this.cache.delete(productReviewListCacheKeyWithUserId(userId)),
+            this.productReviewAnalyticsService.invalidateProductReviewAnalyticsCache(
+                productId
+            ),
         ]);
 
         return productReview;
@@ -347,6 +352,9 @@ export class ProductReviewService {
                 productReviewListCacheKey(productReview.product.id)
             ),
             this.cache.delete(productReviewListCacheKeyWithUserId(userId)),
+            this.productReviewAnalyticsService.invalidateProductReviewAnalyticsCache(
+                productReview.product.id
+            ),
         ]);
 
         return updateReview;
@@ -375,6 +383,9 @@ export class ProductReviewService {
             this.cache.delete(productReviewListCacheKey(review.product.id)),
             this.cache.delete(
                 productReviewListCacheKeyWithUserId(review.user.id)
+            ),
+            this.productReviewAnalyticsService.invalidateProductReviewAnalyticsCache(
+                review.product.id
             ),
         ]);
 

@@ -1,25 +1,31 @@
 import {
     Controller,
     Get,
+    Param,
     ParseDatePipe,
     ParseEnumPipe,
     Query,
 } from "@nestjs/common";
-import { ApiOperation, ApiQuery } from "@nestjs/swagger";
+import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 
-import { PlatformReviewAnalyticsService } from "./platform-review-analytics.service";
+import { ProductReviewAnalyticsService } from "./product-review-analytics.service";
 
-@Controller("review/platform/analytics")
-export class PlatformReviewAnalyticsController {
+@Controller("review/product/analytics")
+export class ProductReviewAnalyticsController {
     constructor(
-        private readonly platformReviewAnalyticsService: PlatformReviewAnalyticsService
+        private readonly productReviewAnalyticsService: ProductReviewAnalyticsService
     ) {}
 
-    @Get("summary")
+    @Get("summary/:productId")
     @ApiOperation({
-        summary: "Get platform review summary",
+        summary: "Get product review summary",
         description:
-            "Returns platform review statistics, optionally filtered by date range.",
+            "Returns product review statistics, optionally filtered by date range.",
+    })
+    @ApiParam({
+        name: "productId",
+        required: true,
+        type: String,
     })
     @ApiQuery({
         name: "startDate",
@@ -33,23 +39,30 @@ export class PlatformReviewAnalyticsController {
         type: String,
         format: "date",
     })
-    async getPlatformReviewSummary(
+    async getProductReviewSummary(
+        @Param("productId") productId: string,
         @Query("startDate", new ParseDatePipe({ optional: true }))
         startDate?: Date,
         @Query("endDate", new ParseDatePipe({ optional: true }))
         endDate?: Date
     ) {
-        return this.platformReviewAnalyticsService.getPlatformReviewSummary(
+        return this.productReviewAnalyticsService.getProductReviewSummary(
+            productId,
             startDate,
             endDate
         );
     }
 
-    @Get("trend")
+    @Get("trend/:productId")
     @ApiOperation({
-        summary: "Get platform review trend",
+        summary: "Get product review trend",
         description:
-            "Returns the historical platform review trend grouped by month or year.",
+            "Returns the historical product review trend grouped by month or year.",
+    })
+    @ApiParam({
+        name: "productId",
+        required: true,
+        type: String,
     })
     @ApiQuery({
         name: "startDate",
@@ -71,7 +84,8 @@ export class PlatformReviewAnalyticsController {
         enum: ["month", "year"],
         example: "month",
     })
-    async getPlatformReviewTrend(
+    async getProductReviewTrend(
+        @Param("productId") productId: string,
         @Query("startDate", new ParseDatePipe({ optional: true }))
         startDate?: Date,
         @Query("endDate", new ParseDatePipe({ optional: true }))
@@ -79,7 +93,8 @@ export class PlatformReviewAnalyticsController {
         @Query("interval", new ParseEnumPipe(["month", "year"] as const))
         interval: "month" | "year" = "month"
     ) {
-        return this.platformReviewAnalyticsService.getPlatformReviewTrend(
+        return this.productReviewAnalyticsService.getProductReviewTrend(
+            productId,
             startDate,
             endDate,
             interval

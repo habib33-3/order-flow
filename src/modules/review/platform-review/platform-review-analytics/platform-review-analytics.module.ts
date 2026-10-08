@@ -6,5 +6,6 @@ import { PlatformReviewAnalyticsService } from "./platform-review-analytics.serv
 @Module({
     controllers: [PlatformReviewAnalyticsController],
     providers: [PlatformReviewAnalyticsService],
+    exports: [PlatformReviewAnalyticsService],
 })
 export class PlatformReviewAnalyticsModule {}
