@@ -1,0 +1,20 @@
+model ShippingAddress {
+  id    String @id @default(cuid())
+  title String
+
+  userId     String
+  address    String
+  city       String
+  state      String?
+  postalCode String
+  country    String
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@index([userId])
+
+  @@map("shipping_addresses")
+}

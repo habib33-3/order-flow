@@ -26,7 +26,7 @@ import { RedisService } from "src/common/redis/redis.service";
 import { User } from "src/generated/prisma/client";
 import { JwtPayload, RefreshTokenPayload } from "src/types/types";
 
-import { UserService } from "../user/user.service";
+import { UserService } from "../../user/user.service";
 import { LoginUserDto } from "./dto/login.dto";
 import { RegisterUserDto } from "./dto/registration.dto";
 import { VerifyOtpEmailDto } from "./dto/verify-otp.dto";

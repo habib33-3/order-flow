@@ -12,8 +12,8 @@ import { QueueModule } from "./common/queue/queue.module";
 import { RedisModule } from "./common/redis/redis.module";
 import { UploadFileModule } from "./common/upload-file/upload-file.module";
 import { CronJobModule } from "./jobs/cron-job.module";
-import { AuthModule } from "./modules/auth/auth.module";
-import { AccessTokenGuard } from "./modules/auth/guards/access-token.guard";
+import { AuthModule } from "./modules/auth/auth/auth.module";
+import { AccessTokenGuard } from "./modules/auth/auth/guards/access-token.guard";
 import { PasswordModule } from "./modules/auth/password/password.module";
 import { CartModule } from "./modules/cart/cart.module";
 import { CategoryModule } from "./modules/category/category.module";
@@ -22,6 +22,10 @@ import { CouponModule } from "./modules/coupon/coupon/coupon.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
 import { ProductsModule } from "./modules/products/products.module";
+import { PlatformReviewAnalyticsModule } from "./modules/review/platform-review/platform-review-analytics/platform-review-analytics.module";
+import { PlatformReviewModule } from "./modules/review/platform-review/platform-review/platform-review.module";
+import { ProductReviewAnalyticsModule } from "./modules/review/product-review/product-review-analytics/product-review-analytics.module";
+import { ProductReviewModule } from "./modules/review/product-review/product-review/product-review.module";
 import { ShippingAddressModule } from "./modules/shipping-address/shipping-address.module";
 import { UserModule } from "./modules/user/user.module";
 
@@ -56,6 +60,10 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         CartModule,
         CouponModule,
         CouponAnalyticsModule,
+        PlatformReviewModule,
+        PlatformReviewAnalyticsModule,
+        ProductReviewModule,
+        ProductReviewAnalyticsModule,
     ],
     controllers: [AppController],
     providers: [

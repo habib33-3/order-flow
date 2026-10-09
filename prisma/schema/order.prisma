@@ -1,0 +1,52 @@
+model OrderItem {
+    id        String  @id @default(cuid())
+    orderId   String
+    productId String
+    quantity  Int     @default(1)
+    unitPrice Decimal @db.Decimal(10, 2)
+    subtotal  Decimal @db.Decimal(10, 2)
+
+    order   Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+    product Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([orderId, productId])
+    @@map("order_items")
+}
+
+model Order {
+    id              String      @id @default(cuid())
+    userId          String
+    total           Decimal     @db.Decimal(10, 2)
+    status          OrderStatus @default(PENDING)
+    shippingAddress String
+    note            String?
+
+    user  User        @relation(fields: [userId], references: [id])
+    items OrderItem[]
+
+    couponId String?
+    coupon   Coupon? @relation(fields: [couponId], references: [id])
+
+    paidAt     DateTime?
+    canceledAt DateTime?
+
+    createdAt DateTime  @default(now())
+    updatedAt DateTime  @updatedAt
+    payments  Payment[]
+
+    @@index([userId])
+    @@index([status])
+    @@map("orders")
+}
+
+enum OrderStatus {
+    PENDING
+    CONFIRMED
+    PROCESSING
+    SHIPPED
+    DELIVERED
+    CANCELED
+}

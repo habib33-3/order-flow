@@ -9,5 +9,6 @@ generate:
 db-reset:
 	pnpm exec prisma migrate reset
 
-db-seed:
+db-seed: generate
+	pnpm exec prisma migrate deploy
 	pnpm exec prisma db seed
