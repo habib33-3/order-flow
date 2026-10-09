@@ -1,7 +1,7 @@
 import { INestApplication } from "@nestjs/common";
 import { DocumentBuilder, SwaggerModule } from "@nestjs/swagger";
 
-import { ACCESS_TOKEN } from "src/modules/auth/constants/auth.constants";
+import { ACCESS_TOKEN } from "src/modules/auth/auth/constants/auth.constants";
 
 import * as packageJson from "../../../package.json";
 import { env } from "../env/env";
