@@ -1,8 +1,9 @@
 import { CouponStatus, ProductStatus } from "src/generated/prisma/enums";
+import { ReviewQualityType } from "src/modules/review/platform-review/platform-review/constants";
 
 import { env } from "../env/env";
 
-const withPrefix = (...parts: (string | number | undefined | null)[]) =>
+const withPrefix = (...parts: (string | number | Date | undefined | null)[]) =>
     `${env.APP_NAME}-cache:${parts
         .filter((part) => part !== undefined && part !== null && part !== "")
         .join(":")}`;
@@ -125,3 +126,116 @@ export const couponRedemptionsCacheKey = (
 
 export const couponDistributionByTypeCacheKey = (year: number) =>
     withPrefix("coupon", "distribution-by-type", year);
+
+// platform review
+export const platformReviewCacheKeyWithUserId = (userId: string) =>
+    withPrefix("review", "platform", "userId", userId);
+
+export const platformReviewCacheKeyWithReviewId = (reviewId: string) =>
+    withPrefix("review", "platform", "reviewId", reviewId);
+
+export const platformReviewUserCacheKey = () =>
+    withPrefix("review", "user", "latest-good");
+
+export const platformReviewAdminListCacheKey = (
+    cursor?: string,
+    limit = 20,
+    search?: string,
+    sortBy: "createdAt" | "rating" | "userId" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    rating?: number,
+    quality?: ReviewQualityType
+) =>
+    withPrefix(
+        "review",
+        "admin-list",
+        cursor,
+        limit,
+        search,
+        sortBy,
+        sort,
+        rating,
+        quality
+    );
+
+export const platformReviewSummaryCacheKey = (
+    startDate?: Date,
+    endDate?: Date
+) => withPrefix("review", "platform", "summary", startDate, endDate);
+
+export const platformReviewTrendCacheKey = (
+    startDate?: Date,
+    endDate?: Date,
+    interval: "month" | "year" = "month"
+) => withPrefix("review", "platform", "trend", startDate, endDate, interval);
+
+// product review
+
+export const productReviewCacheKeyWithId = (id: string) =>
+    withPrefix("product-review", "id", id);
+
+export const productReviewListCacheKey = (
+    productId: string,
+    cursor?: string,
+    limit = 20,
+    search?: string,
+    sortBy: "createdAt" | "rating" | "userId" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    rating?: number
+) =>
+    withPrefix(
+        "product-review",
+        "list",
+        productId,
+        cursor,
+        limit,
+        search,
+        sortBy,
+        sort,
+        rating
+    );
+
+export const productReviewListCacheKeyWithUserId = (
+    userId: string,
+    cursor?: string,
+    limit = 20,
+    search?: string,
+    sortBy: "createdAt" | "rating" | "userId" = "createdAt",
+    sort: "asc" | "desc" = "desc",
+    rating?: number
+) =>
+    withPrefix(
+        "product-review",
+        "list",
+        "userId",
+        userId,
+        cursor,
+        limit,
+        search,
+        sortBy,
+        sort,
+        rating
+    );
+
+// product review analytics
+
+export const productReviewSummaryCacheKey = (
+    id: string,
+    startDate?: Date,
+    endDate?: Date
+) => withPrefix("product-review", "summary", id, startDate, endDate);
+
+export const productReviewTrendCacheKey = (
+    productId: string,
+    startDate?: Date,
+    endDate?: Date,
+    interval: "month" | "year" = "month"
+) =>
+    withPrefix(
+        "product-review",
+        "trend",
+        productId,
+        startDate,
+        endDate,
+        interval
+    );
