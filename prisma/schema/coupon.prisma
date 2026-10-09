@@ -1,0 +1,55 @@
+model Coupon {
+    id       String     @id @default(cuid())
+    type     CouponType
+    code     String     @unique
+    discount Decimal
+
+    startAt DateTime
+    endAt   DateTime
+
+    minimumOrderAmount    Decimal?
+    maximumDiscountAmount Decimal?
+
+    status CouponStatus @default(INACTIVE)
+
+    maxLimit       Int @default(1)
+    remainingLimit Int @default(1)
+
+    maxLimitPerUser Int @default(1)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    couponRedeems CouponRedeem[]
+    orders        Order[]
+
+    @@map("coupons")
+}
+
+enum CouponStatus {
+    ACTIVE
+    INACTIVE
+    EXPIRED
+}
+
+enum CouponType {
+    PERCENTAGE
+    FIXED
+}
+
+model CouponRedeem {
+    id       String @id @default(cuid())
+    userId   String
+    couponId String
+
+    coupon Coupon @relation(fields: [couponId], references: [id], onDelete: Cascade)
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@index([couponId])
+    @@index([userId])
+    @@index([couponId, userId])
+    @@map("coupon_redeems")
+}

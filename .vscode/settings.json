@@ -1,14 +1,17 @@
 {
   "js/ts.tsdk.path": "node_modules\\typescript\\lib",
+
   "material-icon-theme.activeIconPack": "nest",
   "cSpell.words": [
     "appendonly",
     "Bagshot",
+    "BIGSALE",
     "BKASH",
     "buildx",
     "Buildx",
     "bullmq",
     "cjiki",
+    "cuid",
     "darraghor",
     "Dgbjxi",
     "DOCKERHUB",
@@ -49,5 +52,6 @@
     "ywfu",
     "zwkhnrb"
   ],
-  "makefile.configureOnOpen": false
+  "makefile.configureOnOpen": false,
+  "js/ts.experimental.useTsgo": false
 }
