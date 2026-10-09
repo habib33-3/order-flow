@@ -4,11 +4,13 @@
   "cSpell.words": [
     "appendonly",
     "Bagshot",
+    "BIGSALE",
     "BKASH",
     "buildx",
     "Buildx",
     "bullmq",
     "cjiki",
+    "cuid",
     "darraghor",
     "Dgbjxi",
     "DOCKERHUB",
@@ -49,5 +51,15 @@
     "ywfu",
     "zwkhnrb"
   ],
-  "makefile.configureOnOpen": false
+  "makefile.configureOnOpen": false,
+  "js/ts.experimental.useTsgo": false,
+  "task.allowAutomaticTasks": true,
+  "debug.openDebug": "neverOpen",
+  "terminal.integrated.inheritEnv": false,
+  "tasks": {
+    "label": "lint on open",
+    "type": "shell",
+    "command": "npm run lint",
+    "runOn": "folderOpen"
+  }
 }

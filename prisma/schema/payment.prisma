@@ -1,0 +1,38 @@
+model Payment {
+    id String @id @default(cuid())
+
+    amount         Decimal         @db.Decimal(10, 2)
+    status         PaymentStatus   @default(PENDING)
+    provider       PaymentProvider
+    currency       String          @default("USD")
+    idempotencyKey String
+    transactionId  String?
+    expiresAt      DateTime?
+
+    orderId String
+    order   Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+    userId String
+    user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+    createdAt DateTime @default(now())
+    updatedAt DateTime @updatedAt
+
+    @@unique([provider, idempotencyKey])
+    @@unique([provider, transactionId])
+    @@index([orderId])
+    @@index([status, expiresAt])
+    @@map("payments")
+}
+
+enum PaymentStatus {
+    PENDING
+    PAID
+    FAILED
+    EXPIRED
+}
+
+enum PaymentProvider {
+    STRIPE
+    BKASH
+}
