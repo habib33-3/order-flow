@@ -27,6 +27,14 @@ export const cleanDatabase = async (prisma: PrismaClient) => {
     const deletedCouponRedeems = await prisma.couponRedeem.deleteMany();
     console.log(`✅ Deleted ${deletedCouponRedeems.count} coupon redeem(s).`);
 
+    const deletedProductReviews = await prisma.productReview.deleteMany();
+    console.log(`✅ Deleted ${deletedProductReviews.count} product review(s).`);
+
+    const deletedPlatformReviews = await prisma.platformReview.deleteMany();
+    console.log(
+        `✅ Deleted ${deletedPlatformReviews.count} platform review(s).`
+    );
+
     const deletedCoupons = await prisma.coupon.deleteMany();
     console.log(`✅ Deleted ${deletedCoupons.count} coupon(s).`);
 

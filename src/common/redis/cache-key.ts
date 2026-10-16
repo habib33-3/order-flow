@@ -239,3 +239,9 @@ export const productReviewTrendCacheKey = (
         endDate,
         interval
     );
+
+// llm product review summary
+export const llmProductReviewSummaryCacheKey = (
+    productId: string,
+    promptVersion: string
+) => withPrefix("llm", "product-review", "summary", promptVersion, productId);

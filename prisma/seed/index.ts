@@ -9,6 +9,8 @@ import { seedCategories } from "./data/categories.seed";
 import { seedCoupons } from "./data/coupons.seed";
 import { seedOrders } from "./data/orders.seed";
 import { seedPayments } from "./data/payment.seed";
+import { seedPlatformReviews } from "./data/platform-review.seed";
+import { seedProductReviews } from "./data/product-reviews.seed";
 import { seedProducts } from "./data/products.seed";
 import { seedShippingAddresses } from "./data/shipping-address.seed";
 import { seedUsers } from "./data/users.seed";
@@ -41,7 +43,9 @@ export const runSeed = async () => {
 
     const admin = await seedAdmin(hashedPassword, prisma);
 
-    const user = await seedUsers(hashedPassword, prisma);
+    const users = await seedUsers(hashedPassword, prisma);
+    const user = users[0];
+    const reviewerUserIds = users.slice(1).map((u) => u.id);
 
     const categories = await seedCategories(prisma);
 
@@ -68,6 +72,20 @@ export const runSeed = async () => {
         prisma
     );
 
+    const platformReviews = await seedPlatformReviews(
+        user.id,
+        admin.id,
+        prisma
+    );
+
+    const productReviews = await seedProductReviews(
+        user.id,
+        admin.id,
+        reviewerUserIds,
+        products,
+        prisma
+    );
+
     console.log("\n🎉 Database seed completed successfully!");
 
     console.log("\n📋 Seed credentials:");
@@ -76,7 +94,7 @@ export const runSeed = async () => {
     console.log(`Password: ${plainPassword}`);
 
     console.log("\n📊 Seed summary:");
-    console.log(`Users: 2`);
+    console.log(`Users: ${users.length + 1}`);
     console.log(`Categories: ${categories.length}`);
     console.log(`Products: ${products.length}`);
     console.log(`Shipping addresses: ${shippingAddresses.length}`);
@@ -86,6 +104,9 @@ export const runSeed = async () => {
     console.log(`Order items: ${order.order.items.length}`);
     console.log(`Payments: 1`);
     console.log(`Payment: ${payment.id}`);
+    console.log(`Platform reviews: ${platformReviews.length}`);
+    console.log(`Product reviews: ${productReviews.length}`);
+    console.log(`Coupon redeems: ${order.order.couponId ? 1 : 0}`);
 };
 
 export const disconnectSeedDatabase = async () => {

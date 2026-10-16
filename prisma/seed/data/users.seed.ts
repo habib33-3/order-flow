@@ -2,22 +2,49 @@
 import { PrismaClient } from "../../../src/generated/prisma/client";
 
 /**
- * Seed regular user
+ * Seed regular users
  */
 export const seedUsers = async (password: string, prisma: PrismaClient) => {
-    console.log("👤 Creating regular user...");
+    console.log("👤 Creating regular users...");
 
-    const user = await prisma.user.create({
-        data: {
+    const usersData = [
+        {
             name: "User",
             email: "user@demo.com",
             password,
-            role: "USER",
-            status: "ACTIVE",
+            role: "USER" as const,
+            status: "ACTIVE" as const,
         },
-    });
+        {
+            name: "Sarah Miller",
+            email: "sarah@demo.com",
+            password,
+            role: "USER" as const,
+            status: "ACTIVE" as const,
+        },
+        {
+            name: "Alex Rivera",
+            email: "alex@demo.com",
+            password,
+            role: "USER" as const,
+            status: "ACTIVE" as const,
+        },
+        {
+            name: "David Chen",
+            email: "david@demo.com",
+            password,
+            role: "USER" as const,
+            status: "ACTIVE" as const,
+        },
+    ];
 
-    console.log(`✅ User created: ${user.email}`);
+    const users = await Promise.all(
+        usersData.map((data) => prisma.user.create({ data }))
+    );
 
-    return user;
+    console.log(
+        `✅ Created ${users.length} regular user(s): ${users.map((u) => u.email).join(", ")}`
+    );
+
+    return users;
 };

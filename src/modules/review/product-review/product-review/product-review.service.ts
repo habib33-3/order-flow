@@ -2,17 +2,20 @@ import {
     BadRequestException,
     ForbiddenException,
     Injectable,
+    Logger,
     NotFoundException,
 } from "@nestjs/common";
 
 import { PrismaService } from "src/common/prisma/prisma.service";
 import {
+    llmProductReviewSummaryCacheKey,
     productReviewCacheKeyWithId,
     productReviewListCacheKey,
     productReviewListCacheKeyWithUserId,
 } from "src/common/redis/cache-key";
 import { RedisService } from "src/common/redis/redis.service";
 import { Prisma } from "src/generated/prisma/client";
+import { PROMPT_VERSION } from "src/modules/product-review-summary/product-review-summary.constants";
 import { ProductsService } from "src/modules/products/products.service";
 import { JwtPayload } from "src/types/types";
 
@@ -21,6 +24,8 @@ import { UpdateProductReviewDto } from "./dto/update-product-review.dto";
 
 @Injectable()
 export class ProductReviewService {
+    private readonly logger = new Logger(ProductReviewService.name);
+
     constructor(
         private readonly prisma: PrismaService,
         private readonly productService: ProductsService,
@@ -66,6 +71,7 @@ export class ProductReviewService {
             ),
             this.cache.delete(productReviewListCacheKey(productId)),
             this.cache.delete(productReviewListCacheKeyWithUserId(userId)),
+            this.invalidateLlmProductReviewSummaryCache(productId),
             this.productReviewAnalyticsService.invalidateProductReviewAnalyticsCache(
                 productId
             ),
@@ -352,6 +358,9 @@ export class ProductReviewService {
                 productReviewListCacheKey(productReview.product.id)
             ),
             this.cache.delete(productReviewListCacheKeyWithUserId(userId)),
+            this.invalidateLlmProductReviewSummaryCache(
+                productReview.product.id
+            ),
             this.productReviewAnalyticsService.invalidateProductReviewAnalyticsCache(
                 productReview.product.id
             ),
@@ -384,6 +393,7 @@ export class ProductReviewService {
             this.cache.delete(
                 productReviewListCacheKeyWithUserId(review.user.id)
             ),
+            this.invalidateLlmProductReviewSummaryCache(review.product.id),
             this.productReviewAnalyticsService.invalidateProductReviewAnalyticsCache(
                 review.product.id
             ),
@@ -392,5 +402,21 @@ export class ProductReviewService {
         return {
             message: "Review deleted successfully",
         };
+    }
+
+    private async invalidateLlmProductReviewSummaryCache(
+        productId: string
+    ): Promise<void> {
+        try {
+            await this.cache.delete(
+                llmProductReviewSummaryCacheKey(productId, PROMPT_VERSION)
+            );
+        } catch (error) {
+            const errorType =
+                error instanceof Error ? error.name : typeof error;
+            this.logger.error(
+                `Could not invalidate product review summary (productId=${productId}, errorType=${errorType})`
+            );
+        }
     }
 }
