@@ -1,6 +1,5 @@
 {
   "js/ts.tsdk.path": "node_modules\\typescript\\lib",
-
   "material-icon-theme.activeIconPack": "nest",
   "cSpell.words": [
     "appendonly",
@@ -52,5 +51,14 @@
     "zwkhnrb"
   ],
   "makefile.configureOnOpen": false,
-  "js/ts.experimental.useTsgo": false
+  "js/ts.experimental.useTsgo": false,
+  "task.allowAutomaticTasks": true,
+  "debug.openDebug": "neverOpen",
+  "terminal.integrated.inheritEnv": false,
+  "tasks": {
+    "label": "lint on open",
+    "type": "shell",
+    "command": "npm run lint",
+    "runOn": "folderOpen"
+  }
 }
