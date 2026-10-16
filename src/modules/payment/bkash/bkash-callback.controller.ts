@@ -2,6 +2,8 @@ import { Controller, Get, Query } from "@nestjs/common";
 import { ApiExcludeEndpoint } from "@nestjs/swagger";
 
 import { Public } from "src/common/decorators/public.decorator";
+import { RateLimitPolicy } from "src/common/rate-limit/rate-limit.config";
+import { RateLimit } from "src/common/rate-limit/rate-limit.decorator";
 
 import { BkashCallbackService } from "./bkash-callback.service";
 
@@ -12,6 +14,7 @@ export class BkashCallbackController {
 
     @ApiExcludeEndpoint()
     @Get("callback")
+    @RateLimit(RateLimitPolicy.PAYMENT_VERIFICATION)
     async callback(
         @Query("paymentID") paymentID: string,
         @Query("status") status?: string

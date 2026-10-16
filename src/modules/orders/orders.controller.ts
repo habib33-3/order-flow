@@ -13,6 +13,8 @@ import { ApiOperation, ApiParam, ApiQuery } from "@nestjs/swagger";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { AdminGuard } from "src/common/guards/admin.guard";
+import { RateLimitPolicy } from "src/common/rate-limit/rate-limit.config";
+import { RateLimit } from "src/common/rate-limit/rate-limit.decorator";
 import { OrderStatus } from "src/generated/prisma/enums";
 import { type JwtPayload } from "src/types/types";
 
@@ -24,6 +26,7 @@ export class OrdersController {
     constructor(private readonly ordersService: OrdersService) {}
 
     @Post()
+    @RateLimit(RateLimitPolicy.PAYMENT_INITIATION)
     @ApiOperation({
         summary: "Create an order",
         description: "Create a new order for the authenticated user.",

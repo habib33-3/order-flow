@@ -3,6 +3,8 @@ import { ApiOperation } from "@nestjs/swagger";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { Public } from "src/common/decorators/public.decorator";
+import { RateLimitPolicy } from "src/common/rate-limit/rate-limit.config";
+import { RateLimit } from "src/common/rate-limit/rate-limit.decorator";
 
 import { ChangePasswordDto } from "./dto/change-password.dto";
 import {
@@ -16,6 +18,7 @@ import { PasswordService } from "./password.service";
 export class PasswordController {
     constructor(private readonly passwordService: PasswordService) {}
 
+    @RateLimit(RateLimitPolicy.AUTH)
     @Patch("change")
     @ApiOperation({
         summary: "Change the authenticated user's password",
@@ -30,6 +33,7 @@ export class PasswordController {
     }
 
     @Public()
+    @RateLimit(RateLimitPolicy.PASSWORD_RESET)
     @Patch("forgot")
     @ApiOperation({
         summary: "Request password reset",
@@ -41,6 +45,7 @@ export class PasswordController {
     }
 
     @Public()
+    @RateLimit(RateLimitPolicy.PASSWORD_RESET)
     @Patch("verify-otp")
     @ApiOperation({
         summary: "Verify password reset OTP",
@@ -52,6 +57,7 @@ export class PasswordController {
     }
 
     @Public()
+    @RateLimit(RateLimitPolicy.PASSWORD_RESET)
     @Patch("reset")
     @ApiOperation({
         summary: "Reset password",

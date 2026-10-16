@@ -4,6 +4,8 @@ import { ApiExcludeEndpoint } from "@nestjs/swagger";
 import { type Request } from "express";
 
 import { Public } from "src/common/decorators/public.decorator";
+import { RateLimitPolicy } from "src/common/rate-limit/rate-limit.config";
+import { RateLimit } from "src/common/rate-limit/rate-limit.decorator";
 
 import { StripeWebhookService } from "./stripe-webhook.service";
 
@@ -14,6 +16,7 @@ export class StripeWebhookController {
 
     @ApiExcludeEndpoint()
     @Post("webhook")
+    @RateLimit(RateLimitPolicy.EXEMPT)
     @HttpCode(200)
     async handleWebhook(
         @Req() req: Request,

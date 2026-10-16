@@ -5,6 +5,8 @@ import { type Request } from "express";
 
 import { CurrentUser } from "src/common/decorators/current-user.decorator";
 import { Public } from "src/common/decorators/public.decorator";
+import { RateLimitPolicy } from "src/common/rate-limit/rate-limit.config";
+import { RateLimit } from "src/common/rate-limit/rate-limit.decorator";
 
 import { AuthService } from "./auth.service";
 import { LoginUserDto } from "./dto/login.dto";
@@ -18,6 +20,7 @@ export class AuthController {
     constructor(private readonly authService: AuthService) {}
 
     @Public()
+    @RateLimit(RateLimitPolicy.OTP)
     @Post("register")
     @ApiOperation({
         summary: "Register a new user",
@@ -30,6 +33,7 @@ export class AuthController {
     }
 
     @Public()
+    @RateLimit(RateLimitPolicy.OTP)
     @Post("otp/verify")
     @ApiOperation({
         summary: "Verify OTP",
@@ -42,6 +46,7 @@ export class AuthController {
     }
 
     @Public()
+    @RateLimit(RateLimitPolicy.OTP)
     @Post("otp/resend")
     @ApiOperation({
         summary: "Resend OTP",
@@ -54,6 +59,7 @@ export class AuthController {
     }
 
     @Public()
+    @RateLimit(RateLimitPolicy.AUTH)
     @Post("login")
     @ApiOperation({
         summary: "Authenticate a user",
@@ -75,6 +81,7 @@ export class AuthController {
     }
 
     @Public()
+    @RateLimit(RateLimitPolicy.AUTH)
     @UseGuards(RefreshTokenGuard)
     @ApiOperation({
         summary: "Refresh access token",

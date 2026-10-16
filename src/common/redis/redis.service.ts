@@ -9,6 +9,38 @@ import Redis from "ioredis";
 
 import { env } from "../env/env";
 
+const incrementRateLimitScript = `
+local blockedTtl = redis.call("PTTL", KEYS[2])
+if blockedTtl > 0 then
+    return {
+        tonumber(redis.call("GET", KEYS[1]) or "0"),
+        math.max(redis.call("PTTL", KEYS[1]), 0),
+        blockedTtl
+    }
+end
+
+local totalHits = redis.call("INCR", KEYS[1])
+if totalHits == 1 then
+    redis.call("PEXPIRE", KEYS[1], ARGV[1])
+end
+
+local timeToExpire = math.max(redis.call("PTTL", KEYS[1]), 0)
+local timeToBlockExpire = 0
+if totalHits > tonumber(ARGV[2]) then
+    redis.call("SET", KEYS[2], "1", "PX", ARGV[3])
+    timeToBlockExpire = tonumber(ARGV[3])
+end
+
+return { totalHits, timeToExpire, timeToBlockExpire }
+`;
+
+export type RateLimitCounterRecord = {
+    totalHits: number;
+    timeToExpire: number;
+    isBlocked: boolean;
+    timeToBlockExpire: number;
+};
+
 @Injectable()
 export class RedisService implements OnModuleInit, OnModuleDestroy {
     private readonly logger = new Logger(RedisService.name);
@@ -116,6 +148,49 @@ export class RedisService implements OnModuleInit, OnModuleDestroy {
             return await this.redis.ttl(key);
         } catch (error) {
             this.handleError("TTL", key, error);
+        }
+    }
+
+    async incrementRateLimit(
+        key: string,
+        ttl: number,
+        limit: number,
+        blockDuration: number
+    ): Promise<RateLimitCounterRecord> {
+        try {
+            const result: unknown = await this.redis.eval(
+                incrementRateLimitScript,
+                2,
+                `${key}:hits`,
+                `${key}:blocked`,
+                ttl,
+                limit,
+                blockDuration
+            );
+
+            if (!Array.isArray(result) || result.length !== 3) {
+                throw new Error("Invalid Redis rate-limit response");
+            }
+
+            const [totalHits, timeToExpire, timeToBlockExpire] =
+                result.map(Number);
+
+            if (
+                !Number.isFinite(totalHits) ||
+                !Number.isFinite(timeToExpire) ||
+                !Number.isFinite(timeToBlockExpire)
+            ) {
+                throw new Error("Invalid Redis rate-limit counter values");
+            }
+
+            return {
+                totalHits,
+                timeToExpire,
+                isBlocked: timeToBlockExpire > 0,
+                timeToBlockExpire,
+            };
+        } catch (error) {
+            this.handleError("INCR rate limit", key, error);
         }
     }
 
