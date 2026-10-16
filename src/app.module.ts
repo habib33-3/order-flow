@@ -7,6 +7,7 @@ import { AppController } from "./app.controller";
 import { AppService } from "./app.service";
 import { EmailModule } from "./common/email/email.module";
 import { env, validateEnv } from "./common/env/env";
+import { LlmModule } from "./common/llm/llm.module";
 import { PrismaModule } from "./common/prisma/prisma.module";
 import { QueueModule } from "./common/queue/queue.module";
 import { RedisModule } from "./common/redis/redis.module";
@@ -21,6 +22,7 @@ import { CouponAnalyticsModule } from "./modules/coupon/coupon-analytics/coupon-
 import { CouponModule } from "./modules/coupon/coupon/coupon.module";
 import { OrdersModule } from "./modules/orders/orders.module";
 import { PaymentModule } from "./modules/payment/payment.module";
+import { ProductReviewSummaryModule } from "./modules/product-review-summary/product-review-summary.module";
 import { ProductsModule } from "./modules/products/products.module";
 import { PlatformReviewAnalyticsModule } from "./modules/review/platform-review/platform-review-analytics/platform-review-analytics.module";
 import { PlatformReviewModule } from "./modules/review/platform-review/platform-review/platform-review.module";
@@ -64,6 +66,8 @@ export const { ObserveModule, ObserveInstrument } = createObserveModule();
         PlatformReviewAnalyticsModule,
         ProductReviewModule,
         ProductReviewAnalyticsModule,
+        LlmModule,
+        ProductReviewSummaryModule,
     ],
     controllers: [AppController],
     providers: [

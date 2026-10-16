@@ -74,9 +74,16 @@ const envSchema = z.object({
     CLOUDINARY_API_KEY: z.string(),
     CLOUDINARY_API_SECRET: z.string(),
 
+    // bull-board
     SHOW_BULL_BOARD: z.coerce.boolean().default(false),
+
+    // observe
     OBSERVE_APP_KEY: z.string(),
     OBSERVE_APP_SECRET: z.string(),
+
+    // open router
+    OPENROUTER_API_KEY: z.string(),
+    OPENROUTER_MODEL: z.string(),
 });
 
 export type Env = z.infer<typeof envSchema>;

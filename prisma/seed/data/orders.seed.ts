@@ -86,6 +86,26 @@ export const seedOrders = async (
         },
     });
 
+    if (couponId) {
+        await prisma.couponRedeem.create({
+            data: {
+                couponId,
+                userId,
+            },
+        });
+
+        await prisma.coupon.update({
+            where: {
+                id: couponId,
+            },
+            data: {
+                remainingLimit: {
+                    decrement: 1,
+                },
+            },
+        });
+    }
+
     console.log(
         `✅ Created order ${order.id} — subtotal: ${subtotal}, discount: ${discount}, total: ${total}`
     );
