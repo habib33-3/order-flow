@@ -245,3 +245,7 @@ export const llmProductReviewSummaryCacheKey = (
     productId: string,
     promptVersion: string
 ) => withPrefix("llm", "product-review", "summary", promptVersion, productId);
+
+// rate limit
+export const throttlerStorageKey = (throttlerName: string, key: string) =>
+    withPrefix("throttler", throttlerName, key);
