@@ -1,8 +1,6 @@
-import {
-    type ThrottlerStorage,
-    type ThrottlerStorageRecord,
-} from "@nestjs/throttler";
+import { type ThrottlerStorage } from "@nestjs/throttler";
 
+import { throttlerStorageKey } from "../redis/cache-key";
 import { RedisService } from "../redis/redis.service";
 
 export class RedisThrottlerStorage implements ThrottlerStorage {
@@ -14,8 +12,8 @@ export class RedisThrottlerStorage implements ThrottlerStorage {
         limit: number,
         blockDuration: number,
         throttlerName: string
-    ): Promise<ThrottlerStorageRecord> {
-        const storageKey = `rate-limit:{${throttlerName}:${key}}`;
+    ) {
+        const storageKey = throttlerStorageKey(throttlerName, key);
 
         return this.redis.incrementRateLimit(
             storageKey,
